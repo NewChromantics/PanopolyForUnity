@@ -45,12 +45,12 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Debug_Depth: 0
-    - Encoded_ChromaRangeCount: 36
-    - Encoded_DepthMaxMetres: 5
+    - Encoded_ChromaRangeCount: 0
+    - Encoded_DepthMaxMetres: 0
     - Encoded_DepthMinMetres: 0
     - Encoded_DepthRanges: 1
     - Encoded_LumaPingPong: 0
-    - PlaneCount: 3
+    - PlaneCount: 2
     - ValidMinMetres: 0.01
     - _Angle: 0
     m_Colors: []
