@@ -47,7 +47,7 @@ namespace Panopoly
 			}
 			catch(System.Exception e)
 			{
-				Debug.LogException(e);
+				Debug.LogError("Failed to allocated PopH264 decoder: " + e.Message);
 			}
 		}
 
