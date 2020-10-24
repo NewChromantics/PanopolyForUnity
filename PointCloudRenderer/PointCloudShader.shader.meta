@@ -1,0 +1,11 @@
+fileFormatVersion: 2
+guid: d40bdbe7d4ce43146a2ca0c88162e587
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - CloudPositions: {instanceID: 0}
+  - CloudColours: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
