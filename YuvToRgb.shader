@@ -18,7 +18,7 @@
 			#pragma vertex vert
 			#pragma fragment frag
 
-			#include "../PopUnity/PopYuv.cginc"
+			#include "PopYuv.cginc"
 
 			struct appdata
 			{
