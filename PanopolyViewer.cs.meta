@@ -3,7 +3,12 @@ guid: d2b7a287632cd5048b5a851ed718f45b
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - ColourBlitTarget: {instanceID: 0}
+  - ColourBlitMaterial: {fileID: 2100000, guid: fbf6afad7d00841ef825ab922e83f06a,
+      type: 2}
+  - DepthBlitTarget: {instanceID: 0}
+  - DepthBlitMaterial: {fileID: 2100000, guid: 3bd230d12064a3c42a31b559526dc11b, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
