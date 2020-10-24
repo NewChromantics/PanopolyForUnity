@@ -32,7 +32,10 @@ namespace Panopoly
 		public bool					ThreadedDecoding = true;
 		List<TFrameData>			PendingFrames = new List<TFrameData>();
 		TDecodedFrame?				LastDecodedFrame = null;	//	saved for BlitEveryFrame. maybe store in PanopolyViewer. This is the last decoded frame we returned.
-		TDecodedFrame?				NextDecodedFrame = null;	//	last frame we decoded which was in the future
+		TDecodedFrame?				NextDecodedFrame = null;    //	last frame we decoded which was in the future
+
+		Dictionary<int, PopCap.TFrameMeta> FrameMetas = new Dictionary<int, TFrameMeta>();  //	hack: we're ditching old data, but need to fetch meta back again later
+		int FrameCounter = 0;		//	gr: PopH264, osx at least, isn't returning correct frame numbers
 
 		public TStream(string Name)
 		{
@@ -66,8 +69,12 @@ namespace Panopoly
 				var Frame = PendingFrames[0];
 				if (Frame.Meta.Time > Millseconds)
 					break;
-				if (Decoder!=null)
-					Decoder.PushFrameData(Frame.Data, Frame.Meta.Time);
+				if (Decoder != null)
+				{
+					Decoder.PushFrameData(Frame.Data, FrameCounter);
+					FrameMetas[FrameCounter] = Frame.Meta;
+					FrameCounter++;
+				}
 				PendingFrames.RemoveAt(0);
 			}
 		}
@@ -111,6 +118,14 @@ namespace Panopoly
 				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
 				if (!NewFrameTime.HasValue)
 					return PrevFrame;
+				if ( FrameMetas.ContainsKey(NewFrameTime.Value))
+				{
+					NewFrame.Meta = FrameMetas[NewFrameTime.Value];
+				}
+				else
+				{
+					Debug.LogError("Missing meta for new frame " + NewFrameTime.Value);
+				}
 
 				//	set this as next frame and loop around
 				NextDecodedFrame = NewFrame;
@@ -167,7 +182,7 @@ public class PanopolyViewer : MonoBehaviour
 
 	public void OnMeta(string StringPacket)
 	{
-		var Meta = JsonUtility.FromJson<PopCap.TFrameMeta>(StringPacket);
+		var Meta = PopCap.TFrameMeta.Parse(StringPacket);
 		OnMeta(Meta);
 	}
 
@@ -178,7 +193,7 @@ public class PanopolyViewer : MonoBehaviour
 
 		if (PendingMeta.HasValue)
 		{
-			Debug.LogWarning("Stream "+ PendingMeta.Value.Stream+" has pending meta, but didn't get data (should pass on meta to stream without data?)",this );
+			Debug.LogWarning("Stream "+ PendingMeta.Value.StreamName+" has pending meta, but didn't get data (should pass on meta to stream without data?)",this );
 		}
 		PendingMeta = Meta;
 		
@@ -192,7 +207,7 @@ public class PanopolyViewer : MonoBehaviour
 			throw new System.Exception("Recieved data without preceding meta");
 
 		var Meta = PendingMeta.Value;
-		var Stream = GetStream(Meta.Stream);
+		var Stream = GetStream(Meta.StreamName);
 		Stream.PushFrame(PendingMeta.Value, Data);
 
 		PendingMeta = null;
@@ -215,8 +230,15 @@ public class PanopolyViewer : MonoBehaviour
 
 	bool IsDepthStream(PopCap.TFrameMeta Meta,List<Pop.PixelFormat> FramePixelFormats)
 	{
-		if (Meta.Stream.Contains("reyscale"))
-			return false;
+		//	go by stream name
+		if ( !string.IsNullOrEmpty(Meta.StreamName) )
+		{
+			if (Meta.StreamName.Contains("reyscale"))
+				return false;
+			return true;
+		}
+
+		Debug.Log("Unnamed stream, pixelformat0=" + FramePixelFormats[0].ToString());
 		return true;
 	}
 
@@ -276,7 +298,8 @@ public class PanopolyViewer : MonoBehaviour
 		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
-		OnBlit.Invoke(BlitTarget);
+		if ( OnBlit != null)
+			OnBlit.Invoke(BlitTarget);
 	}
 
 
@@ -292,7 +315,8 @@ public class PanopolyViewer : MonoBehaviour
 		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
-		OnBlit.Invoke(BlitTarget);
+		if ( OnBlit != null )
+			OnBlit.Invoke(BlitTarget);
 	}
 
 

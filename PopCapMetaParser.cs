@@ -37,8 +37,9 @@ namespace PopCap
 	public struct TFrameMeta
 	{
 		public int QueuedH264Packets;   //	at the time, number of h264 packets that were queued
-		public string CameraName;
+		//public string CameraName;
 		public string Stream;
+		public string StreamName;
 		public int DataSize;        //	this is the h264 packet size
 		public int OutputTimeMs;        //	time the packet was sent to network/file
 		public H264EncoderParams_Meta EncoderParams;
@@ -79,6 +80,23 @@ namespace PopCap
 		public int Height;
 		public bool Keyframe;
 		public int LumaSize;
+
+		static public TFrameMeta Parse(string Json)
+		{
+			var This = JsonUtility.FromJson<PopCap.TFrameMeta>(Json);
+			//	backwards compatibility from old formats
+			if ( string.IsNullOrEmpty(This.StreamName) )
+			{
+				This.StreamName = This.Stream;
+			}
+			if (string.IsNullOrEmpty(This.StreamName))
+			{
+				Debug.LogWarning("Frame JSON with no streamname");
+			}
+			return This;
+		}
 	};
+
+
 
 }
