@@ -30,14 +30,22 @@ namespace Panopoly
 		PopH264.Decoder				Decoder;
 		public PopH264.DecoderMode	DecoderMode = PopH264.DecoderMode.MagicLeap_NvidiaHardware;
 		public bool					ThreadedDecoding = true;
-		List<TFrameData>			PendingFrames;
+		List<TFrameData>			PendingFrames = new List<TFrameData>();
 		TDecodedFrame?				LastDecodedFrame = null;	//	saved for BlitEveryFrame. maybe store in PanopolyViewer. This is the last decoded frame we returned.
 		TDecodedFrame?				NextDecodedFrame = null;	//	last frame we decoded which was in the future
 
 		public TStream(string Name)
 		{
 			this.Name = Name;
-			Decoder = new PopH264.Decoder(DecoderMode, ThreadedDecoding);
+			//	gr: continue even if we fail to create a decoder to aid flow testing
+			try
+			{
+				Decoder = new PopH264.Decoder(DecoderMode, ThreadedDecoding);
+			}
+			catch(System.Exception e)
+			{
+				Debug.LogException(e);
+			}
 		}
 
 		public void PushFrame(PopCap.TFrameMeta Meta,byte[] Data)
@@ -58,7 +66,8 @@ namespace Panopoly
 				var Frame = PendingFrames[0];
 				if (Frame.Meta.Time > Millseconds)
 					break;
-				Decoder.PushFrameData(Frame.Data, Frame.Meta.Time);
+				if (Decoder!=null)
+					Decoder.PushFrameData(Frame.Data, Frame.Meta.Time);
 				PendingFrames.RemoveAt(0);
 			}
 		}
@@ -67,6 +76,9 @@ namespace Panopoly
 		public TDecodedFrame? GetFrameToTime(int Milliseconds,bool ReturnLastFrameIfNotNew)
 		{
 			System.Func<TDecodedFrame?> NoFrame = () => { return ReturnLastFrameIfNotNew ? LastDecodedFrame : null; };
+
+			if (Decoder == null)
+				return NoFrame();
 
 			//	avoid infinite loop if say, timestamps are bad
 			int Tries = 20;
@@ -95,7 +107,7 @@ namespace Panopoly
 				var PrevFrame = NextDecodedFrame.HasValue ? NextDecodedFrame : NoFrame();
 
 				//	decode next frame
-				var NewFrame = new TFrame();
+				var NewFrame = new TDecodedFrame();
 				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
 				if (!NewFrameTime.HasValue)
 					return PrevFrame;
@@ -261,10 +273,10 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta.EncoderParams, Frame.FramePlaneTextures, TextureUniformNames);
+		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
-		OnBlit.Invoke(BlitTarget, FrameTime);
+		OnBlit.Invoke(BlitTarget);
 	}
 
 
@@ -277,10 +289,10 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta.EncoderParams, Frame.FramePlaneTextures, TextureUniformNames);
+		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
-		OnBlit.Invoke(BlitTarget, FrameTime);
+		OnBlit.Invoke(BlitTarget);
 	}
 
 
