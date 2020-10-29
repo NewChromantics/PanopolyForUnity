@@ -9,8 +9,6 @@
 		Plane3("Plane3", 2D) = "white" {}
 		[IntRange]PlaneCount("PlaneCount",Range(0,3)) = 3
 
-		DepthTex("Depth Tex", 2D) = "white" {}
-
 		[Header(Encoding Params from PopCap)]Encoded_DepthMinMetres("Encoded_DepthMinMetres",Range(0,30)) = 0
 		Encoded_DepthMaxMetres("Encoded_DepthMaxMetres",Range(0,30)) = 5
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
@@ -51,7 +49,6 @@
 				float4 LumaPlane_ST;
 				sampler2D Plane2;
 				sampler2D Plane3;
-				sampler2D DepthTex;
 				int PlaneCount;
 				#define ChromaUPlane	Plane2
 				#define ChromaVPlane	Plane3
