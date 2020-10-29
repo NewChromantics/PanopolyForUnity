@@ -26,6 +26,7 @@ namespace Panopoly
 
 	public class TStream
 	{
+		public bool					VerboseDebug { get { return PanopolyViewer.StreamVerboseDebug; } }
 		public string				Name;
 		PopH264.Decoder				Decoder;
 		public PopH264.DecoderMode	DecoderMode = PopH264.DecoderMode.MagicLeap_NvidiaHardware;
@@ -71,6 +72,8 @@ namespace Panopoly
 					break;
 				if (Decoder != null)
 				{
+					if (VerboseDebug)
+						Debug.Log("Decoding data x" + Frame.Data.Length + " Framenumber #" + FrameCounter);
 					Decoder.PushFrameData(Frame.Data, FrameCounter);
 					FrameMetas[FrameCounter] = Frame.Meta;
 					FrameCounter++;
@@ -118,6 +121,8 @@ namespace Panopoly
 				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
 				if (!NewFrameTime.HasValue)
 					return PrevFrame;
+				if (VerboseDebug)
+					Debug.Log("Decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrameTime.Value))
 				{
 					NewFrame.Meta = FrameMetas[NewFrameTime.Value];
@@ -166,6 +171,7 @@ public class PanopolyViewer : MonoBehaviour
 	[Header("To aid debugging material/shader")]
 	public bool BlitEveryFrame = false;
 
+	static public bool StreamVerboseDebug = false;
 
 	PopCap.TFrameMeta? PendingMeta = null;  //	meta preceding next data
 
@@ -223,6 +229,7 @@ public class PanopolyViewer : MonoBehaviour
 
 	void Update()
 	{
+		StreamVerboseDebug = VerboseDebug;
 		UpdateClock();
 		UpdateDecode();
 		UpdateFrame();
