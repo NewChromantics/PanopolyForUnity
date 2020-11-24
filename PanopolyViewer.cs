@@ -9,6 +9,7 @@ namespace Panopoly
 {
 	[System.Serializable]
 	public class UnityEvent_ColourAndDepthAndTime : UnityEngine.Events.UnityEvent<Texture, Texture, int> { }
+	[System.Serializable]
 	public class UnityEvent_Texture : UnityEngine.Events.UnityEvent<Texture> { }
 
 	public struct TFrameData
@@ -159,6 +160,9 @@ namespace Panopoly
 
 public class PanopolyViewer : MonoBehaviour
 {
+	[System.Serializable]
+	public class UnityEvent_StreamBytes : UnityEngine.Events.UnityEvent<string,byte[]> { }
+
 	public bool VerboseDebug = false;
 
 	[Range(0, 30)]
@@ -171,6 +175,8 @@ public class PanopolyViewer : MonoBehaviour
 
 	Dictionary<string, TStream> Streams = new Dictionary<string, TStream>();
 	public PopH264.DecoderParams DecoderParams;
+	[Header("When we get data for a stream. Use to dump raw data to a file for testing")]
+	public UnityEvent_StreamBytes OnStreamData;
 
 	public List<string> TextureUniformNames;
 
@@ -229,6 +235,8 @@ public class PanopolyViewer : MonoBehaviour
 		var Meta = PendingMeta.Value;
 		var Stream = GetStream(Meta.StreamName);
 		Stream.PushFrame(PendingMeta.Value, Data);
+
+		OnStreamData.Invoke(Meta.StreamName, Data);
 
 		PendingMeta = null;
 	}
