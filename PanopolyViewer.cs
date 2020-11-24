@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
 using Panopoly;
+using Pop;
 
 namespace Panopoly
 {
@@ -29,7 +30,7 @@ namespace Panopoly
 		public bool					VerboseDebug { get { return PanopolyViewer.StreamVerboseDebug; } }
 		public string				Name;
 		PopH264.Decoder				Decoder;
-		public PopH264.DecoderMode	DecoderMode = PopH264.DecoderMode.MagicLeap_NvidiaHardware;
+		public PopH264.DecoderParams DecoderParams;
 		public bool					ThreadedDecoding = true;
 		List<TFrameData>			PendingFrames = new List<TFrameData>();
 		TDecodedFrame?				LastDecodedFrame = null;	//	saved for BlitEveryFrame. maybe store in PanopolyViewer. This is the last decoded frame we returned.
@@ -38,13 +39,14 @@ namespace Panopoly
 		Dictionary<int, PopCap.TFrameMeta> FrameMetas = new Dictionary<int, TFrameMeta>();  //	hack: we're ditching old data, but need to fetch meta back again later
 		int FrameCounter = 0;		//	gr: PopH264, osx at least, isn't returning correct frame numbers
 
-		public TStream(string Name)
+		public TStream(string Name,PopH264.DecoderParams DecoderParams)
 		{
 			this.Name = Name;
+			this.DecoderParams = DecoderParams;
 			//	gr: continue even if we fail to create a decoder to aid flow testing
 			try
 			{
-				Decoder = new PopH264.Decoder(DecoderMode, ThreadedDecoding);
+				Decoder = new PopH264.Decoder(DecoderParams, ThreadedDecoding);
 			}
 			catch(System.Exception e)
 			{
@@ -73,7 +75,9 @@ namespace Panopoly
 				if (Decoder != null)
 				{
 					if (VerboseDebug)
-						Debug.Log("Decoding data x" + Frame.Data.Length + " Framenumber #" + FrameCounter);
+					{
+						Debug.Log("Stream " + Name + " decoding data x" + Frame.Data.Length + " Framenumber #" + FrameCounter);
+					}
 					Decoder.PushFrameData(Frame.Data, FrameCounter);
 					FrameMetas[FrameCounter] = Frame.Meta;
 					FrameCounter++;
@@ -98,7 +102,11 @@ namespace Panopoly
 				if (NextDecodedFrame.HasValue)
 				{
 					if (NextDecodedFrame.Value.FrameTime > Milliseconds)
+					{
+						if (VerboseDebug)
+							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.FrameTime + ">"+Milliseconds);
 						return NoFrame();
+					}
 
 					//	got next frame and it's spot on
 					if (NextDecodedFrame.Value.FrameTime == Milliseconds)
@@ -120,9 +128,14 @@ namespace Panopoly
 				var NewFrame = new TDecodedFrame();
 				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
 				if (!NewFrameTime.HasValue)
+				{
+					if (VerboseDebug)
+						Debug.Log("Stream " + Name + " no frame");
+
 					return PrevFrame;
+				}
 				if (VerboseDebug)
-					Debug.Log("Decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
+					Debug.Log("Stream " + Name + " decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrameTime.Value))
 				{
 					NewFrame.Meta = FrameMetas[NewFrameTime.Value];
@@ -157,6 +170,7 @@ public class PanopolyViewer : MonoBehaviour
 	public int DecodeAheadMs = 100;
 
 	Dictionary<string, TStream> Streams = new Dictionary<string, TStream>();
+	public PopH264.DecoderParams DecoderParams;
 
 	public List<string> TextureUniformNames;
 
@@ -179,7 +193,7 @@ public class PanopolyViewer : MonoBehaviour
 	TStream GetStream(string Name)
 	{
 		if (!Streams.ContainsKey(Name))
-			Streams.Add(Name, new TStream(Name));
+			Streams.Add(Name, new TStream(Name,DecoderParams));
 		return Streams[Name];
 	}
 	
