@@ -21,7 +21,7 @@ namespace Panopoly
 	public struct TDecodedFrame
 	{
 		public List<Texture2D> FramePlaneTextures;
-		public List<Pop.PixelFormat> FramePlaneFormats;
+		public List<PopH264.PixelFormat> FramePlaneFormats;
 		public PopCap.TFrameMeta Meta;
 		public int FrameTime;
 	}
@@ -257,7 +257,7 @@ public class PanopolyViewer : MonoBehaviour
 		UpdateFrame();
 	}
 
-	bool IsDepthStream(PopCap.TFrameMeta Meta,List<Pop.PixelFormat> FramePixelFormats)
+	bool IsDepthStream(PopCap.TFrameMeta Meta,List<PopH264.PixelFormat> FramePixelFormats)
 	{
 		//	go by stream name
 		if ( !string.IsNullOrEmpty(Meta.StreamName) )
