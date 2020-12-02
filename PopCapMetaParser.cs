@@ -47,10 +47,17 @@ namespace PopCap
 		public float[] Intrinsics;
 		public float[] IntrinsicsCameraResolution;  //	wxh
 		public float[] LocalEulerRadians;
-		public float[] LocalToWorld;			//	gr: this is currently transposed (column major in ARkit). Next version will be in a different struct/variable and this will be deprecated
+
+
+		//	gr: this is currently transposed (column major in ARkit). Next version will be in a different struct/variable and this will be deprecated
+		//	this is arcamera.transform. Multiply a world space position by this, to get camera space pos out (for anchors)
+		//	therefore, it is world to local[camera]
+		public float[] LocalToWorld;
+		
 		public float[] ProjectionMatrix;        //	may be 3x3, should be corrected in capture in future. Column major, needs transposing
 		public string Tracking;                 //	state
 		public string TrackingStateReason;
+		public bool ARWorldAlignmentGravity { get { return true; } } //	gr: currently always set to ARWorldAlignmentGravity
 
 		public Vector3 GetCameraSpaceViewportMin()
 		{
@@ -62,14 +69,36 @@ namespace PopCap
 			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
 		}
 
-		public Matrix4x4 GetLocalToWorld()
+		public Matrix4x4 GetWorldToLocal()
 		{
 			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
 			var Row1 = new Vector4(LocalToWorld[4], LocalToWorld[5], LocalToWorld[6], LocalToWorld[7]);
 			var Row2 = new Vector4(LocalToWorld[8], LocalToWorld[9], LocalToWorld[10], LocalToWorld[11]);
 			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
+
+			var Transform = new Matrix4x4();
+			Transform.SetColumn(0, Row0);
+			Transform.SetColumn(1, Row1);
+			Transform.SetColumn(2, Row2);
+			Transform.SetColumn(3, Row3);
+			return Transform;
+			/*
 			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
-			return Transform.transpose;
+
+			//	gr: we're using gravity alignment
+			//		see ARWorldAlignmentGravity
+			//	we also have z going in the wrong direction
+			//		https://developer.apple.com/documentation/arkit/arcamera/2866108-transform?language=objc
+			//		and the z - axis points away from the device on the screen side.
+			var InvertZ = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(1, 1, -1));
+			//Transform = 
+			return Transform.transpose;*/
+		}
+
+		public Matrix4x4 GetLocalToWorld()
+		{
+			var WorldToLocal = GetWorldToLocal();
+			return WorldToLocal.inverse;
 		}
 
 		//	projection matrix
