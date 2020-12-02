@@ -31,8 +31,73 @@ namespace PopCap
 		public int DepthMinMm;
 		public bool PingPongLuma;
 	};
-	
-	
+
+	[System.Serializable]
+	public struct TAnchor
+	{
+		public float[] LocalToWorld;
+		public string Name;
+		public string SessionUuid;
+		public string Uuid;
+	};
+
+	[System.Serializable]
+	public class TCamera
+	{
+		public float[] Intrinsics;
+		public float[] IntrinsicsCameraResolution;  //	wxh
+		public float[] LocalEulerRadians;
+		public float[] LocalToWorld;			//	gr: this is currently transposed (column major in ARkit). Next version will be in a different struct/variable and this will be deprecated
+		public float[] ProjectionMatrix;        //	may be 3x3, should be corrected in capture in future. Column major, needs transposing
+		public string Tracking;                 //	state
+		public string TrackingStateReason;
+
+		public Vector3 GetCameraSpaceViewportMin()
+		{
+			return new Vector3(0, 0, 0);
+		}
+		public Vector3 GetCameraSpaceViewportMax()
+		{
+			//	ios depth in mm
+			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
+		}
+
+		public Matrix4x4 GetLocalToWorld()
+		{
+			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
+			var Row1 = new Vector4(LocalToWorld[4], LocalToWorld[5], LocalToWorld[6], LocalToWorld[7]);
+			var Row2 = new Vector4(LocalToWorld[8], LocalToWorld[9], LocalToWorld[10], LocalToWorld[11]);
+			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
+			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
+			return Transform.transpose;
+		}
+
+		//	projection matrix
+		//	converts local space to image space, IntrinsicsCameraResolution, not 0..1
+		//	todo: make source transform to uv space
+		public Matrix4x4 GetCameraToLocal()
+		{
+			//var Row0 = new Vector4(ProjectionMatrix[0], ProjectionMatrix[1], ProjectionMatrix[2], ProjectionMatrix[3]);
+			//var Row1 = new Vector4(ProjectionMatrix[4], ProjectionMatrix[5], ProjectionMatrix[6], ProjectionMatrix[7]);
+			//var Row2 = new Vector4(ProjectionMatrix[8], ProjectionMatrix[9], ProjectionMatrix[10], ProjectionMatrix[11]);
+			//var Row3 = new Vector4(ProjectionMatrix[12], ProjectionMatrix[13], ProjectionMatrix[14], ProjectionMatrix[15]);
+			var Row0 = new Vector4(Intrinsics[0], Intrinsics[1], Intrinsics[2], 0);
+			var Row1 = new Vector4(Intrinsics[3], Intrinsics[4], Intrinsics[5], 0);
+			var Row2 = new Vector4(Intrinsics[6], Intrinsics[7], Intrinsics[8], 0);
+			var Row3 = new Vector4(0, 0, 0, 1);
+			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
+			return Transform.transpose;
+		}
+
+		//	projection matrix inverse, convert image-space (0..w, not 0..1) coordinates
+		public Matrix4x4 GetLocalToCamera()
+		{
+			var LocalToCamera = GetCameraToLocal();
+			return LocalToCamera.inverse;
+		}
+	};
+
+
 	[System.Serializable]
 	public struct TFrameMeta
 	{
@@ -72,13 +137,22 @@ namespace PopCap
 		public float p1;
 		public float p2;
 
+		//	arkit meta
+		public TAnchor[] Anchors;
+		public TCamera Camera;
+		public int FeatureCount;
+		public int[] ImageOrigRect;		//	original image size
+		public int[] ImageResizeRect;   //	image size encoded as rect of original
+		public float LightIntensity;
+		public float LightTemperature;
+
 		//	data sent to encoder we dont care about
 		public int ChromaUSize;
 		public int ChromaVSize;
 		public string Format;   //	original input from camera
 		public int Width;
 		public int Height;
-		public bool Keyframe;
+		public bool Keyframe;   //	gr: this may be the requested keyframe state, so may not match NALU/IFrame status
 		public int LumaSize;
 
 		static public TFrameMeta Parse(string Json)
@@ -94,6 +168,17 @@ namespace PopCap
 				Debug.LogWarning("Frame JSON with no streamname");
 			}
 			return This;
+		}
+
+		public Matrix4x4 GetCameraToLocal()
+		{
+			if (Camera == null)
+				return Matrix4x4.identity;
+
+			if (Camera.ProjectionMatrix == null)
+				return Matrix4x4.identity;
+
+			return Camera.GetCameraToLocal();
 		}
 	};
 
