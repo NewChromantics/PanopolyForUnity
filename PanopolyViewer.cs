@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -187,6 +187,7 @@ public class PanopolyViewer : MonoBehaviour
 	public Material DepthBlitMaterial;
 	public UnityEvent_Texture OnColourUpdated;
 	public UnityEvent_Texture OnDepthUpdated;
+	public UnityEvent_PanopolyFrameColourDepth OnFrame;
 
 	[Header("To aid debugging material/shader")]
 	public bool BlitEveryFrame = false;
@@ -288,6 +289,9 @@ public class PanopolyViewer : MonoBehaviour
 		//	get latest frames from each stream
 		//	gr: try and keep these in sync, UpdateClock() should do it, it should figure out the sync'd frame we should be displaying
 		var FrameTime = this.TimeMs;
+		TDecodedFrame? DepthFrame = null;
+		TDecodedFrame? ColourFrame = null;
+
 		foreach (KeyValuePair<string,TStream> NameAndStream in Streams)
 		{
 			var StreamName = NameAndStream.Key;
@@ -300,11 +304,21 @@ public class PanopolyViewer : MonoBehaviour
 			var IsDepth = IsDepthStream(NewFrame.Value.Meta, NewFrame.Value.FramePlaneFormats);
 
 			if (IsDepth)
+			{
+				DepthFrame = NewFrame;
 				UpdateBlitDepth(NewFrame.Value);
+			}
 			else
+			{
+				ColourFrame = NewFrame;
 				UpdateBlitColour(NewFrame.Value);
+			}
 		}
 
+		if (DepthFrame.HasValue && ColourFrame.HasValue)
+		{
+			OnFrame.Invoke(ColourFrame.Value.Meta, ColourBlitTarget, DepthFrame.Value.Meta, DepthBlitTarget);
+		}
 		/*
 		//	gr this needs to sync with frame output
 		//	maybe this component should just blit, then send complete texture with timecode to something else
