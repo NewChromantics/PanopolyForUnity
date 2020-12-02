@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -161,7 +161,10 @@ namespace Panopoly
 public class PanopolyViewer : MonoBehaviour
 {
 	[System.Serializable]
-	public class UnityEvent_StreamBytes : UnityEngine.Events.UnityEvent<string,byte[]> { }
+	public class UnityEvent_StreamBytes : UnityEngine.Events.UnityEvent<string, byte[]> { }
+
+	[System.Serializable]
+	public class UnityEvent_PanopolyFrameColourDepth : UnityEngine.Events.UnityEvent<PopCap.TFrameMeta, Texture, PopCap.TFrameMeta, Texture> { }
 
 	public bool VerboseDebug = false;
 
@@ -338,7 +341,7 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
+		UpdateMaterial(BlitMaterial, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
 		if ( OnBlit != null)
@@ -355,7 +358,7 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta.YuvEncodeParams, Frame.FramePlaneTextures, TextureUniformNames);
+		UpdateMaterial(BlitMaterial, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
 
 		Graphics.Blit(null, BlitTarget, BlitMaterial);
 		if ( OnBlit != null )
@@ -363,13 +366,20 @@ public class PanopolyViewer : MonoBehaviour
 	}
 
 
-	void UpdateMaterial(Material material,YuvEncoderParams_Meta EncoderParams, List<Texture2D> Planes, List<string> PlaneUniforms)
+	void UpdateMaterial(Material material,TFrameMeta Meta, List<Texture2D> Planes, List<string> PlaneUniforms)
 	{
-		material.SetFloat("Encoded_DepthMinMetres", EncoderParams.DepthMinMm / 1000);
-		material.SetFloat("Encoded_DepthMaxMetres", EncoderParams.DepthMaxMm / 1000);
-		material.SetInt("Encoded_ChromaRangeCount", EncoderParams.ChromaRangeCount);
-		material.SetInt("Encoded_LumaPingPong", EncoderParams.PingPongLuma ? 1 : 0);
+		material.SetFloat("Encoded_DepthMinMetres", Meta.YuvEncodeParams.DepthMinMm / 1000);
+		material.SetFloat("Encoded_DepthMaxMetres", Meta.YuvEncodeParams.DepthMaxMm / 1000);
+		material.SetInt("Encoded_ChromaRangeCount", Meta.YuvEncodeParams.ChromaRangeCount);
+		material.SetInt("Encoded_LumaPingPong", Meta.YuvEncodeParams.PingPongLuma ? 1 : 0);
 		material.SetInt("PlaneCount", Planes.Count);
+		material.SetMatrix("CameraToLocalTransform", Meta.GetCameraToLocal());
+
+		if (Meta.Camera != null && Meta.Camera.IntrinsicsCameraResolution!=null)
+		{
+			material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
+			material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
+		}
 
 		for ( var i=0;	i<Mathf.Min(Planes.Count,PlaneUniforms.Count);	i++ )
 		{

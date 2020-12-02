@@ -15,6 +15,9 @@
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
+		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	)
+		CameraToLocalViewportMin("CameraToLocalViewportMin",VECTOR) = (0,0,0)
+		CameraToLocalViewportMax("CameraToLocalViewportMax",VECTOR) = (640,480,1000)
 	}
 	
 		SubShader
@@ -58,6 +61,12 @@
 				float Encoded_DepthMinMetres;
 				float Encoded_DepthMaxMetres;
 				bool Encoded_LumaPingPong;
+
+
+				//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
+				float3 CameraToLocalViewportMin;
+				float3 CameraToLocalViewportMax;
+				float4x4 CameraToLocalTransform;
 				
 				float Debug_Depth;
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
@@ -134,27 +143,51 @@
 					float Luma = GetLuma(i.uv);
 					float2 ChromaUV = GetChromaUv(i.uv);
 					bool Valid = true;
-					float LocalDepth = GetLocalDepth(Luma, ChromaUV.x, ChromaUV.y, Params, Valid, ValidMinMetres);
-					
+					float CameraDepth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, Params, Valid, ValidMinMetres);
 					
 					//	this output should be in camera-local space
 					//	need a proper inverse projection matrix here to go from pixel/uv to projected out from camera
-					float x = lerp(-1,1,i.uv.x); 
-					float y = lerp(-1,1,i.uv.y);
-					float z = LocalDepth;
+					//float x = lerp(-1,1,i.uv.x); 
+					//float y = lerp(-1,1,i.uv.y);
+					float x = lerp(0,1,i.uv.x); 
+					float y = lerp(0,1,i.uv.y);
+					float z = CameraDepth;
 					
+					//	now convert camera(image) space depth by the inverse of projection to get local-space
+
+					float4 CameraPosition = float4(x,y,z,1.0);
+
+					CameraPosition.xyz = lerp( CameraToLocalViewportMin, CameraToLocalViewportMax, CameraPosition.xyz );
+	
+					//	conversion
+					//	https://developer.apple.com/documentation/arkit/arcamera/2875730-intrinsics?language=objc
+					//mat4 CameraToLocal = ApplyCameraToLocalTransformInverse ? CameraToLocalTransformInverse : CameraToLocalTransform;
+					//	gr: note: using camera depth, not CameraPosition.z
+					float Depth = CameraDepth;// * TestProjectionZ;
+					float fx = CameraToLocalTransform[0].x;
+					float fy = CameraToLocalTransform[1].y;
+					float cx = CameraToLocalTransform[0].z;
+					float cy = CameraToLocalTransform[1].z;
+					float3 LocalPosition;
+					LocalPosition.x = ((CameraPosition.x - cx) * Depth) / fx;
+					LocalPosition.y = ((CameraPosition.y - cy) * Depth) / fy;
+					LocalPosition.z = Depth;
+
+					//float4 LocalPositon4 = mul(CameraToLocalTransform,CameraPosition);
+					//float3 LocalPosition = LocalPositon4.xyz / LocalPositon4.www;
+
 					//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 					//	because webgl cant always do float textures so is quantized 8bit
 					//	in native, we could
 
 					if ( DEBUG_DEPTH )
 					{
-						float3 Rgb = NormalToRedGreen(LocalDepth);
+						float3 Rgb = NormalToRedGreen(CameraDepth);
 						return float4(Rgb, 1.0);
 					}
 					
 					float Alpha = Valid ? 1.0 : 0.0;
-					return float4(x,y,z, Alpha);
+					return float4(LocalPosition, Alpha);
 				}
 				ENDCG
 			}

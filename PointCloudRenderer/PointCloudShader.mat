@@ -31,5 +31,5 @@ Material:
     - Billboard: 1
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
-    - PointSize: 0.015
+    - PointSize: 0.0108
     m_Colors: []
