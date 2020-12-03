@@ -177,6 +177,8 @@ public class PanopolyViewer : MonoBehaviour
 	public int TimeMs { get { return (int)(TimeSecs * 1000.0f) + (TimeOffsetFromFirstFrame && FirstTimeMs.HasValue? FirstTimeMs.Value:0); } }
 	public bool TimeOffsetFromFirstFrame = true;
 	int? FirstTimeMs = null;
+	public bool AutoTrackTime = true;   //	todo: better (always external?) clock system
+	float? FirstAutoTrackTime = null;
 
 	[Range(0, 1000)]
 	public int DecodeAheadMs = 100;
@@ -256,6 +258,21 @@ public class PanopolyViewer : MonoBehaviour
 		//	if using external clock, don't change
 		//	if using Latest-frame, find latest sync'd frame and set clock to that
 		//	else do nothing
+		if (AutoTrackTime )
+		{
+			//	if we're using first-frame-time, don't start until we get first frame
+			if (TimeOffsetFromFirstFrame)
+			{
+				if (!FirstTimeMs.HasValue)
+					return;
+			}
+
+			if (!FirstAutoTrackTime.HasValue)
+				FirstAutoTrackTime = Time.time;
+
+			var NowTimeSecs = Time.time - FirstAutoTrackTime.Value;
+			TimeSecs = NowTimeSecs;
+		}
 	}
 
 	void Update()
