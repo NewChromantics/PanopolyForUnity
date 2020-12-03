@@ -23,7 +23,7 @@ namespace Panopoly
 		public List<Texture2D> FramePlaneTextures;
 		public List<PopH264.PixelFormat> FramePlaneFormats;
 		public PopCap.TFrameMeta Meta;
-		public int FrameTime;
+		public int FrameNumber;			//	gr: internal frame counter, independent from meta
 	}
 
 	public class TStream
@@ -37,8 +37,11 @@ namespace Panopoly
 		TDecodedFrame?				LastDecodedFrame = null;	//	saved for BlitEveryFrame. maybe store in PanopolyViewer. This is the last decoded frame we returned.
 		TDecodedFrame?				NextDecodedFrame = null;    //	last frame we decoded which was in the future
 
-		Dictionary<int, PopCap.TFrameMeta> FrameMetas = new Dictionary<int, TFrameMeta>();  //	hack: we're ditching old data, but need to fetch meta back again later
-		int FrameCounter = 0;		//	gr: PopH264, osx at least, isn't returning correct frame numbers
+		//	frame counter mapping to marry meta with frames
+		//	hack: we're ditching old data, but need to fetch meta back again later
+		//	gr: should Poph264 do this itself? object with it. Really it's an identifier in poph264... maybe that is best as it's KISS
+		Dictionary<int, PopCap.TFrameMeta> FrameMetas = new Dictionary<int, TFrameMeta>();  
+		int FrameCounter = 9000;		//	gr: PopH264, osx at least, isn't returning correct frame numbers
 
 		public TStream(string Name,PopH264.DecoderParams DecoderParams)
 		{
@@ -102,15 +105,15 @@ namespace Panopoly
 				//	already have a next frame, and it's too far in the future
 				if (NextDecodedFrame.HasValue)
 				{
-					if (NextDecodedFrame.Value.FrameTime > Milliseconds)
+					if (NextDecodedFrame.Value.Meta.Time > Milliseconds)
 					{
 						if (VerboseDebug)
-							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.FrameTime + ">"+Milliseconds);
+							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.Meta.Time + ">"+Milliseconds);
 						return NoFrame();
 					}
 
 					//	got next frame and it's spot on
-					if (NextDecodedFrame.Value.FrameTime == Milliseconds)
+					if (NextDecodedFrame.Value.Meta.Time == Milliseconds)
 					{
 						LastDecodedFrame = NextDecodedFrame;
 						NextDecodedFrame = null;
@@ -127,30 +130,31 @@ namespace Panopoly
 
 				//	decode next frame
 				var NewFrame = new TDecodedFrame();
-				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
-				if (!NewFrameTime.HasValue)
+				var NewFrameNumberMaybe = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
+				if (!NewFrameNumberMaybe.HasValue)
 				{
 					if (VerboseDebug)
 						Debug.Log("Stream " + Name + " no frame");
 
 					return PrevFrame;
 				}
+				NewFrame.FrameNumber = NewFrameNumberMaybe.Value;
 				if (VerboseDebug)
-					Debug.Log("Stream " + Name + " decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
-				if ( FrameMetas.ContainsKey(NewFrameTime.Value))
+					Debug.Log("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + "(last sent=" + (FrameCounter - 1) +" )");
+				if ( FrameMetas.ContainsKey(NewFrame.FrameNumber))
 				{
-					NewFrame.Meta = FrameMetas[NewFrameTime.Value];
+					NewFrame.Meta = FrameMetas[NewFrame.FrameNumber];
 				}
 				else
 				{
-					Debug.LogError("Missing meta for new frame " + NewFrameTime.Value);
+					Debug.LogError("Missing meta for new frame " + NewFrame.FrameNumber);
 				}
 
 				//	set this as next frame and loop around
 				NextDecodedFrame = NewFrame;
 			}
 
-			Debug.LogError("Aborting after X tries of decoding frame in stream "+ Name);
+			Debug.LogError("Aborting after X tries of decoding frame in stream "+ Name + "(more decoded frames are availible?)");
 			return NoFrame();
 		}
 	};
