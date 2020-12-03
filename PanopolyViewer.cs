@@ -74,7 +74,7 @@ namespace Panopoly
 			while ( PendingFrames.Count > 0 )
 			{
 				var Frame = PendingFrames[0];
-				if (Frame.Meta.Time > Millseconds)
+				if (Frame.Meta.GetFrameTimeMs() > Millseconds)
 					break;
 				if (Decoder != null)
 				{
@@ -105,15 +105,15 @@ namespace Panopoly
 				//	already have a next frame, and it's too far in the future
 				if (NextDecodedFrame.HasValue)
 				{
-					if (NextDecodedFrame.Value.Meta.Time > Milliseconds)
+					if (NextDecodedFrame.Value.Meta.GetFrameTimeMs() > Milliseconds)
 					{
 						if (VerboseDebug)
-							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.Meta.Time + ">"+Milliseconds);
+							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.Meta.GetFrameTimeMs() + ">"+Milliseconds);
 						return NoFrame();
 					}
 
 					//	got next frame and it's spot on
-					if (NextDecodedFrame.Value.Meta.Time == Milliseconds)
+					if (NextDecodedFrame.Value.Meta.GetFrameTimeMs() == Milliseconds)
 					{
 						LastDecodedFrame = NextDecodedFrame;
 						NextDecodedFrame = null;
@@ -174,7 +174,8 @@ public class PanopolyViewer : MonoBehaviour
 
 	[Range(0, 30)]
 	public float TimeSecs = 0;
-	public int TimeMs { get { return (int)(TimeSecs * 1000.0f); } }
+	public int TimeMs { get { return (int)(TimeSecs * 1000.0f) + (TimeOffsetFromFirstFrame && FirstTimeMs.HasValue? FirstTimeMs.Value:0); } }
+	public bool TimeOffsetFromFirstFrame = true;
 	int? FirstTimeMs = null;
 
 	[Range(0, 1000)]
@@ -223,7 +224,7 @@ public class PanopolyViewer : MonoBehaviour
 	public void OnMeta(PopCap.TFrameMeta Meta)
 	{
 		if (!FirstTimeMs.HasValue)
-			FirstTimeMs = Meta.Time;
+			FirstTimeMs = Meta.GetFrameTimeMs();
 
 		if (PendingMeta.HasValue)
 		{
@@ -296,6 +297,7 @@ public class PanopolyViewer : MonoBehaviour
 		//	get latest frames from each stream
 		//	gr: try and keep these in sync, UpdateClock() should do it, it should figure out the sync'd frame we should be displaying
 		var FrameTime = this.TimeMs;
+		Debug.Log("Decoding to time: " + FrameTime);
 		TDecodedFrame? DepthFrame = null;
 		TDecodedFrame? ColourFrame = null;
 

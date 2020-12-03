@@ -135,11 +135,12 @@ namespace PopCap
 		public string Stream;
 		public string StreamName;
 		public int DataSize;        //	this is the h264 packet size
-		public int OutputTimeMs;        //	time the packet was sent to network/file
 		public H264EncoderParams_Meta EncoderParams;
 		public YuvEncoderParams_Meta YuvEncodeParams;
+		public int OutputTimeMs;        //	time the packet was sent to network/file
 		public int FrameTimeMs;
 		public int Time;
+		public int TimeMs;
 		public int YuvEncode_StartTime;
 		public int YuvEncode_DurationMs;
 
@@ -208,6 +209,22 @@ namespace PopCap
 				return Matrix4x4.identity;
 
 			return Camera.GetCameraToLocal();
+		}
+
+		public int GetFrameTimeMs()
+		{
+			//	gr: fallbacks for old formats etc
+			if (Time!=0)
+				return Time;
+
+			if (TimeMs!=0)
+				return TimeMs;
+
+			if (FrameTimeMs!=0)
+				return FrameTimeMs;
+
+			//	gr: we need to make sure 0 isn't actually 0ms, compared to uninitialised 0
+			return OutputTimeMs;
 		}
 	};
 
