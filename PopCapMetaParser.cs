@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -69,6 +69,13 @@ namespace PopCap
 			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
 		}
 
+		public static Matrix4x4 ReconstructMatrix(Matrix4x4 RightHandMatrix)
+		{
+			var Translation = __GetPosition(RightHandMatrix);
+			var Rotation = __GetRotation(RightHandMatrix);
+			return Matrix4x4.TRS(Translation, Rotation, Vector3.one);
+		}
+
 		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
 		public static Vector3 __GetPosition(Matrix4x4 matrix)
 		{
@@ -96,16 +103,6 @@ namespace PopCap
 		{
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
-			/*
-			var InvertZ = new Matrix4x4();
-			InvertZ.SetRow(0, new Vector4(1, 0, 0, 0));
-			InvertZ.SetRow(1, new Vector4(0, 1, 0, 0));
-			InvertZ.SetRow(2, new Vector4(0, 0, -1, 0));
-			InvertZ.SetRow(3, new Vector4(0, 0, 0, 1));
-
-			matrix = matrix * InvertZ;
-
-			*/
 			Quaternion rotation = __QuaternionFromMatrix(matrix);
 			rotation.z = -rotation.z;
 			rotation.w = -rotation.w;
@@ -119,6 +116,7 @@ namespace PopCap
 		{
 			// Adapted from: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 			Quaternion q = new Quaternion();
+			//	>	The max( 0, ... ) is just a safeguard against rounding error.
 			q.w = Mathf.Sqrt(Mathf.Max(0, 1 + m[0, 0] + m[1, 1] + m[2, 2])) / 2;
 			q.x = Mathf.Sqrt(Mathf.Max(0, 1 + m[0, 0] - m[1, 1] - m[2, 2])) / 2;
 			q.y = Mathf.Sqrt(Mathf.Max(0, 1 - m[0, 0] + m[1, 1] - m[2, 2])) / 2;
@@ -131,17 +129,17 @@ namespace PopCap
 
 		public Vector3 GetPosition()
 		{
-			var LocalToWorld = GetLocalToWorld();
+			var LocalToWorld = GetLocalToWorld(false);
 			return __GetPosition(LocalToWorld);
 		}
 
 		public Quaternion GetRotation()
 		{
-			var LocalToWorld = GetLocalToWorld();
+			var LocalToWorld = GetLocalToWorld(false);
 			return __GetRotation(LocalToWorld);
 		}
 
-		public Matrix4x4 GetLocalToWorld()
+		public Matrix4x4 GetLocalToWorld(bool Reconstruct=true)
 		{
 			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
 			var Row1 = new Vector4(LocalToWorld[4], LocalToWorld[5], LocalToWorld[6], LocalToWorld[7]);
@@ -153,6 +151,11 @@ namespace PopCap
 			Transform.SetColumn(1, Row1);
 			Transform.SetColumn(2, Row2);
 			Transform.SetColumn(3, Row3);
+
+			//	convert right hand to left, but can't quite do it in one multiply, so rebuilding matrix (which is stable)
+			if (Reconstruct)
+				Transform = ReconstructMatrix(Transform);
+
 			return Transform;
 			/*
 			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
