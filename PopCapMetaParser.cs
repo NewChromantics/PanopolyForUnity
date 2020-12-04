@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -75,10 +75,18 @@ namespace PopCap
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
 
-			//	gr: here, I'm expecting to get row, not column
-			//	gr: also, /w!
+			var InvertZ = new Matrix4x4();
+			InvertZ.SetRow(0, new Vector4(1, 0, 0, 0));
+			InvertZ.SetRow(1, new Vector4(0, 1, 0, 0));
+			InvertZ.SetRow(2, new Vector4(0, 0, -1, 0));
+			InvertZ.SetRow(3, new Vector4(0, 0, 0, 1));
+
+			matrix = matrix * InvertZ;
+
 			Vector3 position = matrix.GetRow(3);
-			position.z = -position.z;
+			//position.z = -position.z;
+
+
 
 			return position;
 		}
