@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -74,7 +74,10 @@ namespace PopCap
 		{
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
-			Vector3 position = matrix.GetColumn(3);
+
+			//	gr: here, I'm expecting to get row, not column
+			//	gr: also, /w!
+			Vector3 position = matrix.GetRow(3);
 			position.z = -position.z;
 
 			return position;
@@ -85,7 +88,8 @@ namespace PopCap
 		{
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
-			Quaternion rotation = __QuaternionFromMatrix(matrix);
+			var Transm = matrix.transpose;
+			Quaternion rotation = __QuaternionFromMatrix(Transm);
 			rotation.z = -rotation.z;
 			rotation.w = -rotation.w;
 
@@ -128,10 +132,10 @@ namespace PopCap
 			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
 
 			var Transform = new Matrix4x4();
-			Transform.SetRow(0, Row0);
-			Transform.SetRow(1, Row1);
-			Transform.SetRow(2, Row2);
-			Transform.SetRow(3, Row3);
+			Transform.SetColumn(0, Row0);
+			Transform.SetColumn(1, Row1);
+			Transform.SetColumn(2, Row2);
+			Transform.SetColumn(3, Row3);
 			return Transform;
 			/*
 			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
