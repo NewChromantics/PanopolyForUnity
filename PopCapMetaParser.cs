@@ -94,7 +94,6 @@ namespace PopCap
 			//position.z = -position.z;
 
 
-
 			return position;
 		}
 
@@ -103,7 +102,7 @@ namespace PopCap
 		{
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
-			Quaternion rotation = __QuaternionFromMatrix(matrix);
+			Quaternion rotation = __QuaternionFromMatrix_RowMajor(matrix);
 			rotation.z = -rotation.z;
 			rotation.w = -rotation.w;
 
@@ -112,7 +111,7 @@ namespace PopCap
 
 
 		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
-		static Quaternion __QuaternionFromMatrix(Matrix4x4 m)
+		static Quaternion __QuaternionFromMatrix_RowMajor(Matrix4x4 m)
 		{
 			// Adapted from: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
 			Quaternion q = new Quaternion();
@@ -127,20 +126,12 @@ namespace PopCap
 			return q;
 		}
 
-		public Vector3 GetPosition()
-		{
-			var LocalToWorld = GetLocalToWorld(false);
-			return __GetPosition(LocalToWorld);
-		}
 
-		public Quaternion GetRotation()
+		public Matrix4x4 GetLocalToWorld()
 		{
-			var LocalToWorld = GetLocalToWorld(false);
-			return __GetRotation(LocalToWorld);
-		}
+			if (LocalToWorld == null)
+				return Matrix4x4.identity;
 
-		public Matrix4x4 GetLocalToWorld(bool Reconstruct=true)
-		{
 			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
 			var Row1 = new Vector4(LocalToWorld[4], LocalToWorld[5], LocalToWorld[6], LocalToWorld[7]);
 			var Row2 = new Vector4(LocalToWorld[8], LocalToWorld[9], LocalToWorld[10], LocalToWorld[11]);
@@ -153,21 +144,9 @@ namespace PopCap
 			Transform.SetColumn(3, Row3);
 
 			//	convert right hand to left, but can't quite do it in one multiply, so rebuilding matrix (which is stable)
-			if (Reconstruct)
-				Transform = ReconstructMatrix(Transform);
+			Transform = ReconstructMatrix(Transform);
 
 			return Transform;
-			/*
-			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
-
-			//	gr: we're using gravity alignment
-			//		see ARWorldAlignmentGravity
-			//	we also have z going in the wrong direction
-			//		https://developer.apple.com/documentation/arkit/arcamera/2866108-transform?language=objc
-			//		and the z - axis points away from the device on the screen side.
-			var InvertZ = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(1, 1, -1));
-			//Transform = 
-			return Transform.transpose;*/
 		}
 		
 		//	projection matrix

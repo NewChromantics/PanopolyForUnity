@@ -18,6 +18,7 @@
 		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	)
 		CameraToLocalViewportMin("CameraToLocalViewportMin",VECTOR) = (0,0,0)
 		CameraToLocalViewportMax("CameraToLocalViewportMax",VECTOR) = (640,480,1000)
+		[Toggle]ApplyLocalToWorld("ApplyLocalToWorld",Range(0,1))=0
 	}
 	
 		SubShader
@@ -67,9 +68,15 @@
 				float3 CameraToLocalViewportMin;
 				float3 CameraToLocalViewportMax;
 				float4x4 CameraToLocalTransform;
+
+				float4x4 LocalToWorldTransform;
+				float ApplyLocalToWorld;
+				#define APPLY_LOCAL_TO_WORLD	(ApplyLocalToWorld>0.5)
 				
 				float Debug_Depth;
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
+
+			
 
 				float ValidMinMetres;
 
@@ -173,12 +180,14 @@
 					LocalPosition.y = ((CameraPosition.y - cy) * Depth) / fy;
 					LocalPosition.z = Depth;
 
-					//float4 LocalPositon4 = mul(CameraToLocalTransform,CameraPosition);
-					//float3 LocalPosition = LocalPositon4.xyz / LocalPositon4.www;
 
+					float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
+					float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
+				
 					//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 					//	because webgl cant always do float textures so is quantized 8bit
 					//	in native, we could
+					float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
 
 					if ( DEBUG_DEPTH )
 					{
@@ -187,7 +196,7 @@
 					}
 					
 					float Alpha = Valid ? 1.0 : 0.0;
-					return float4(LocalPosition, Alpha);
+					return float4(OutputPosition, Alpha);
 				}
 				ENDCG
 			}
