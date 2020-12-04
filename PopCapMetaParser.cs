@@ -53,7 +53,7 @@ namespace PopCap
 		//	this is arcamera.transform. Multiply a world space position by this, to get camera space pos out (for anchors)
 		//	therefore, it is world to local[camera]
 		public float[] LocalToWorld;
-		
+
 		public float[] ProjectionMatrix;        //	may be 3x3, should be corrected in capture in future. Column major, needs transposing
 		public string Tracking;                 //	state
 		public string TrackingStateReason;
@@ -137,6 +137,7 @@ namespace PopCap
 			var Row2 = new Vector4(LocalToWorld[8], LocalToWorld[9], LocalToWorld[10], LocalToWorld[11]);
 			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
 
+			//	gr: constructor takes COLUMNS, the input data here is column major (from arkit)
 			var Transform = new Matrix4x4();
 			Transform.SetColumn(0, Row0);
 			Transform.SetColumn(1, Row1);
@@ -148,22 +149,44 @@ namespace PopCap
 
 			return Transform;
 		}
+
 		
 		//	projection matrix
 		//	converts local space to image space, IntrinsicsCameraResolution, not 0..1
 		//	todo: make source transform to uv space
 		public Matrix4x4 GetCameraToLocal()
 		{
-			//var Row0 = new Vector4(ProjectionMatrix[0], ProjectionMatrix[1], ProjectionMatrix[2], ProjectionMatrix[3]);
-			//var Row1 = new Vector4(ProjectionMatrix[4], ProjectionMatrix[5], ProjectionMatrix[6], ProjectionMatrix[7]);
-			//var Row2 = new Vector4(ProjectionMatrix[8], ProjectionMatrix[9], ProjectionMatrix[10], ProjectionMatrix[11]);
-			//var Row3 = new Vector4(ProjectionMatrix[12], ProjectionMatrix[13], ProjectionMatrix[14], ProjectionMatrix[15]);
-			var Row0 = new Vector4(Intrinsics[0], Intrinsics[1], Intrinsics[2], 0);
-			var Row1 = new Vector4(Intrinsics[3], Intrinsics[4], Intrinsics[5], 0);
-			var Row2 = new Vector4(Intrinsics[6], Intrinsics[7], Intrinsics[8], 0);
-			var Row3 = new Vector4(0, 0, 0, 1);
-			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
-			return Transform.transpose;
+			//	from 3x3 intrinsics matrix
+			//	fx 0 cx
+			//	0 fy cy
+			//	0 0 1000?
+			float fx = Intrinsics[0];
+			float fy = Intrinsics[4];
+			float cx = Intrinsics[2];
+			float cy = Intrinsics[5];
+
+			//	is this just the inverse of a/the projection matrix?
+			Vector4 CameraToLocalRow0 = new Vector4(1.0f / fx, 0, -cx / fx, 0); //	opposite of (fx, 0, -cx, 0)
+			Vector4 CameraToLocalRow1 = new Vector4(0, 1.0f / fy, -cy / fy, 0);
+			Vector4 CameraToLocalRow2 = new Vector4(0, 0, 1, 0);
+			Vector4 CameraToLocalRow3 = new Vector4(0, 0, 0, 1);
+			var CameraToLocal = new Matrix4x4();
+			CameraToLocal.SetRow(0, CameraToLocalRow0);
+			CameraToLocal.SetRow(1, CameraToLocalRow1);
+			CameraToLocal.SetRow(2, CameraToLocalRow2);
+			CameraToLocal.SetRow(3, CameraToLocalRow3);
+			
+			return CameraToLocal;
+			/*	this is how it's used
+			float4 CameraPosition4;
+			CameraPosition4.x = CameraPosition.x;
+			CameraPosition4.y = CameraPosition.y;
+			CameraPosition4.z = 1;
+			CameraPosition4.w = 1 / Depth;  //	scale all by depth, this is undone by /w hence 1/z
+
+			float4 LocalPosition4 = mul(CameraToLocal, CameraPosition4);
+			float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
+			*/
 		}
 
 		//	projection matrix inverse, convert image-space (0..w, not 0..1) coordinates

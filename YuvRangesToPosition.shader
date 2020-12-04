@@ -166,30 +166,15 @@
 
 					CameraPosition.xyz = lerp( CameraToLocalViewportMin, CameraToLocalViewportMax, CameraPosition.xyz );
 	
-					//	conversion
-					//	https://developer.apple.com/documentation/arkit/arcamera/2875730-intrinsics?language=objc
-					//mat4 CameraToLocal = ApplyCameraToLocalTransformInverse ? CameraToLocalTransformInverse : CameraToLocalTransform;
-					//	gr: note: using camera depth, not CameraPosition.z
-					float Depth = CameraDepth;
-					float fx = CameraToLocalTransform[0].x;
-					float fy = CameraToLocalTransform[1].y;
-					float cx = CameraToLocalTransform[0].z;
-					float cy = CameraToLocalTransform[1].z;
-					
-					//	is this just the inverse of a/the projection matrix?
-					float4x4 CameraToLocal;
-					CameraToLocal[0] = float4(1.0/fx,	0,		-cx/fx,	0);	//	opposite of (fx, 0, -cx, 0)
-					CameraToLocal[1] = float4(0,		1.0/fy,	-cy/fy,	0);
-					CameraToLocal[2] = float4(0,		0,		1,		0);
-					CameraToLocal[3] = float4(0,		0,		0,		1);
-
 					float4 CameraPosition4;
 					CameraPosition4.x = CameraPosition.x;
 					CameraPosition4.y = CameraPosition.y;
 					CameraPosition4.z = 1;
-					CameraPosition4.w = 1/Depth;	//	scale all by depth, this is undone by /w hence 1/z
+					//	scale all by depth, this is undone by /w hence 1/z
+					//	surely this can go in the matrix....
+					CameraPosition4.w = 1/CameraDepth;
 
-					float4 LocalPosition4 = mul(CameraToLocal,CameraPosition4);
+					float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 					float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
 
 
