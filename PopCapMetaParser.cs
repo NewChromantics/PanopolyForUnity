@@ -150,7 +150,13 @@ namespace PopCap
 			return Transform;
 		}
 
-		
+		public Matrix4x4 GetWorldToLocal()
+		{
+			var LocalToWorld = GetLocalToWorld();
+			return LocalToWorld.inverse;
+		}
+
+
 		//	projection matrix
 		//	converts local space to image space, IntrinsicsCameraResolution, not 0..1
 		//	todo: make source transform to uv space

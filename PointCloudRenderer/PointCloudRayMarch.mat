@@ -20,16 +20,24 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - CloudColours:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 8400000, guid: 3d6d7b734f5f38542b814de236d222c5, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - CloudPositions:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 8400000, guid: a4de806843a704967a7983baf5d19c32, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Billboard: 1
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
+    - LocalRayFarDepth: 1.414
+    - LocalRayNearDepth: 0
+    - MaxHitDistance: 0.2
+    - MaxMarchDistance: 1.8
     - PointSize: 0.01
+    - SphereRad: 0
+    - SphereX: 0
+    - SphereY: 0
+    - SphereZ: 0.12
     m_Colors: []

@@ -49,14 +49,15 @@ Shader "Panopoly/PointCloudRayMarch"
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
                 float3 WorldPosition : TEXCOORD1;
                 float3 LocalPosition : TEXCOORD2;
                 float4 vertex : SV_POSITION;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
+			sampler2D CloudPositions;
+			sampler2D CloudColours;
+			float4 CloudPositions_texelSize;
+			float4 CloudColours_texelSize;
 
 			float SphereX;
 			float SphereY;
@@ -66,6 +67,13 @@ Shader "Panopoly/PointCloudRayMarch"
 			float MaxHitDistance;
 			float MaxMarchDistance;
 
+			//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
+			float3 CameraToLocalViewportMin;
+			float3 CameraToLocalViewportMax;
+			float4x4 CameraToLocalTransform;
+			float4x4 LocalToCameraTransform;
+			float4x4 WorldToLocalTransform;
+
 
             v2f vert (appdata v)
             {
@@ -73,10 +81,54 @@ Shader "Panopoly/PointCloudRayMarch"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.WorldPosition = UnityObjectToWorldPos(v.vertex);
                 o.LocalPosition = (v.vertex);
-                //o.LocalPosition = o.WorldPosition;
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 return o;
             }
+
+			bool IsInside01(float v)
+			{
+				return (v>=0) && (v<1.0);
+			}
+
+			float Range(float Min,float Max,float Value)
+			{
+				return (Value-Min) / (Max-Min);
+			}
+
+			float2 Range2(float2 Min,float2 Max,float2 Value)
+			{
+				float x = Range(Min.x,Max.x,Value.x);
+				float y = Range(Min.y,Max.y,Value.y);
+				return float2(x,y);
+			}
+
+			bool GetDistance_ToProjection(float3 RayPosWorld,out float Distance,out float3 Colour)
+			{
+				//	gr: could this get camera uv then sample the position texture?
+
+				//	world -> cloud space
+				float4 RayPosCloud4 = mul(WorldToLocalTransform,float4(RayPosWorld,1));
+				RayPosCloud4.xyz /= RayPosCloud4.www;
+
+				//	cloud space -> camera space (2d)
+				float4 RayPosCamera4 = mul(LocalToCameraTransform,float4(RayPosCloud4.xyz,1));
+
+				//	camera image space to uv
+				float2 RayPosCamera2 = RayPosCamera4.xy / RayPosCamera4.ww;	//	need to div by z too?
+				float2 RayPosUv = Range2( CameraToLocalViewportMin, CameraToLocalViewportMax, RayPosCamera2 );
+
+				RayPosUv.y = 1.0 - RayPosUv.y;
+
+				//	out of view frustum
+				if ( !IsInside01(RayPosUv.x) || !IsInside01(RayPosUv.y) )
+					return false;
+
+				//	get world depth/pos (does this need transform?)
+				float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
+				Distance = distance( RayPosWorld, RayHitCloudPos.xyz );
+				Colour = tex2D(CloudColours,RayPosUv);
+
+				return true;
+			}
 
 
 			//	http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
@@ -106,7 +158,22 @@ Shader "Panopoly/PointCloudRayMarch"
 
 			void GetDistance(float3 RayPosWorld,out float Distance,out float3 Colour)
 			{
-				GetDistance_TestSphere(RayPosWorld,Distance,Colour);
+				float SphereDistance;
+				float3 SphereColour;
+				GetDistance_TestSphere(RayPosWorld,SphereDistance,SphereColour);
+
+				float CloudDistance;
+				float3 CloudColor;
+				if ( GetDistance_ToProjection( RayPosWorld, CloudDistance, CloudColor ) )
+				{
+					Distance = CloudDistance;
+					Colour = CloudColor;
+				}
+				else
+				{
+					Distance = SphereDistance;
+					Colour = SphereColour;
+				}
 			}
 
 
@@ -152,7 +219,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					float t = i/(float)FORWARD_MARCHES;
 					float3 RayPosition = lerp( RayMarchStart, RayMarchEnd, t );
 
-					float HitDistance;
+					float HitDistance = 999;
 					float3 HitColour;
 					GetDistance(RayPosition,HitDistance,HitColour);
 
