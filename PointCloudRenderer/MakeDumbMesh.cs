@@ -14,10 +14,25 @@ public class MakeDumbMesh : MonoBehaviour
 	public int PointCount { get { return PointCountWidth * PointCountHeight; } }
 	public int VertexCount { get { return PointCount * 3; } }
 
+	[Header("If there is a bounding box sibiling, or specified, the mesh will take that [local] bounds")]
+	public BoxCollider BoundingBox;
+
+	Bounds? GetOverrideMeshBounds()
+	{
+		if (BoundingBox != null)
+			return BoundingBox.bounds;
+
+		var ThisBoundingBox = GetComponent<BoxCollider>();
+		if (ThisBoundingBox != null)
+			return ThisBoundingBox.bounds;
+
+		return null;
+	}
+
 	void GenerateMesh()
 	{
 		//	modify existing asset where possible
-		mesh = MakeMesh(PointCountWidth, PointCountHeight, mesh);
+		mesh = MakeMesh(PointCountWidth, PointCountHeight, mesh, GetOverrideMeshBounds() );
 		//	try and make the user save it as a file
 #if UNITY_EDITOR
 		mesh = AssetWriter.SaveAsset(mesh);
@@ -82,7 +97,7 @@ public class MakeDumbMesh : MonoBehaviour
 		Indexes.Add(VertexIndex + 2);
 	}
 
-	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,Mesh ExistingMesh)
+	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,Mesh ExistingMesh,Bounds? OverrideBounds)
 	{
 		var Name = "Triangle Mesh " + PointCountWidth + "x" + PointCountHeight;
 		Debug.Log("Generating new mesh " + Name);
@@ -110,6 +125,9 @@ public class MakeDumbMesh : MonoBehaviour
 
 		Mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 		Mesh.SetIndices(Indexes.ToArray(), MeshTopology.Triangles, 0, true );
+
+		if (OverrideBounds.HasValue)
+			Mesh.bounds = OverrideBounds.Value;
 
 		return Mesh;
 	}
