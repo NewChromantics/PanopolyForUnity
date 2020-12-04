@@ -175,21 +175,21 @@
 					float fy = CameraToLocalTransform[1].y;
 					float cx = CameraToLocalTransform[0].z;
 					float cy = CameraToLocalTransform[1].z;
-					float4 LocalPosition4;
-
+					
 					//	is this just the inverse of a/the projection matrix?
 					float4x4 CameraToLocal;
-					CameraToLocal[0] = float4(1.0/fx,	0,	0,0);
-					CameraToLocal[1] = float4(0,		1.0/fy,0,0);
-					CameraToLocal[2] = float4(0,		0,	1,0);
-					CameraToLocal[3] = float4(0,		0,	0,1);
+					CameraToLocal[0] = float4(1.0/fx,	0,		-cx/fx,	0);	//	opposite of (fx, 0, -cx, 0)
+					CameraToLocal[1] = float4(0,		1.0/fy,	-cy/fy,	0);
+					CameraToLocal[2] = float4(0,		0,		1,		0);
+					CameraToLocal[3] = float4(0,		0,		0,		1);
 
-					LocalPosition4.x = (CameraPosition.x - cx);
-					LocalPosition4.y = (CameraPosition.y - cy);
-					LocalPosition4.z = 1;
-					LocalPosition4.w = 1/Depth;	//	scale all by depth
+					float4 CameraPosition4;
+					CameraPosition4.x = CameraPosition.x;
+					CameraPosition4.y = CameraPosition.y;
+					CameraPosition4.z = 1;
+					CameraPosition4.w = 1/Depth;	//	scale all by depth, this is undone by /w hence 1/z
 
-					LocalPosition4 = mul(CameraToLocal,LocalPosition4);
+					float4 LocalPosition4 = mul(CameraToLocal,CameraPosition4);
 					float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
 
 
