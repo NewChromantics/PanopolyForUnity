@@ -314,7 +314,8 @@ public class PanopolyViewer : MonoBehaviour
 		//	get latest frames from each stream
 		//	gr: try and keep these in sync, UpdateClock() should do it, it should figure out the sync'd frame we should be displaying
 		var FrameTime = this.TimeMs;
-		Debug.Log("Decoding to time: " + FrameTime);
+		if ( VerboseDebug )
+			Debug.Log("Decoding to time: " + FrameTime);
 		TDecodedFrame? DepthFrame = null;
 		TDecodedFrame? ColourFrame = null;
 
