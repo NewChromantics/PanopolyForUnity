@@ -11,6 +11,8 @@ namespace Panopoly
 	public class UnityEvent_ColourAndDepthAndTime : UnityEngine.Events.UnityEvent<Texture, Texture, int> { }
 	[System.Serializable]
 	public class UnityEvent_Texture : UnityEngine.Events.UnityEvent<Texture> { }
+	[System.Serializable]
+	public class UnityEvent_RenderTexture : UnityEngine.Events.UnityEvent<RenderTexture> { }
 
 	public struct TFrameData
 	{
@@ -196,7 +198,7 @@ public class PanopolyViewer : MonoBehaviour
 	public RenderTexture DepthBlitTarget;
 	public Material DepthBlitMaterial;
 	public UnityEvent_Texture OnColourUpdated;
-	public UnityEvent_Texture OnDepthUpdated;
+	public UnityEvent_RenderTexture OnDepthUpdated;
 	public UnityEvent_PanopolyFrameColourDepth OnFrame;
 
 	[Header("To aid debugging material/shader")]
