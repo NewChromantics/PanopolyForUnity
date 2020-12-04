@@ -96,8 +96,17 @@ namespace PopCap
 		{
 			// Convert from ARKit's right-handed coordinate
 			// system to Unity's left-handed
-			var Transm = matrix.transpose;
-			Quaternion rotation = __QuaternionFromMatrix(Transm);
+			/*
+			var InvertZ = new Matrix4x4();
+			InvertZ.SetRow(0, new Vector4(1, 0, 0, 0));
+			InvertZ.SetRow(1, new Vector4(0, 1, 0, 0));
+			InvertZ.SetRow(2, new Vector4(0, 0, -1, 0));
+			InvertZ.SetRow(3, new Vector4(0, 0, 0, 1));
+
+			matrix = matrix * InvertZ;
+
+			*/
+			Quaternion rotation = __QuaternionFromMatrix(matrix);
 			rotation.z = -rotation.z;
 			rotation.w = -rotation.w;
 
@@ -114,9 +123,9 @@ namespace PopCap
 			q.x = Mathf.Sqrt(Mathf.Max(0, 1 + m[0, 0] - m[1, 1] - m[2, 2])) / 2;
 			q.y = Mathf.Sqrt(Mathf.Max(0, 1 - m[0, 0] + m[1, 1] - m[2, 2])) / 2;
 			q.z = Mathf.Sqrt(Mathf.Max(0, 1 - m[0, 0] - m[1, 1] + m[2, 2])) / 2;
-			q.x *= Mathf.Sign(q.x * (m[2, 1] - m[1, 2]));
-			q.y *= Mathf.Sign(q.y * (m[0, 2] - m[2, 0]));
-			q.z *= Mathf.Sign(q.z * (m[1, 0] - m[0, 1]));
+			q.x *= Mathf.Sign(q.x * (m[1, 2] - m[2, 1]));
+			q.y *= Mathf.Sign(q.y * (m[2, 0] - m[0, 2]));
+			q.z *= Mathf.Sign(q.z * (m[0, 1] - m[1, 0]));
 			return q;
 		}
 
