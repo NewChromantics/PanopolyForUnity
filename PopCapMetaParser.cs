@@ -69,7 +69,58 @@ namespace PopCap
 			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
 		}
 
-		public Matrix4x4 GetWorldToLocal()
+		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
+		public static Vector3 __GetPosition(Matrix4x4 matrix)
+		{
+			// Convert from ARKit's right-handed coordinate
+			// system to Unity's left-handed
+			Vector3 position = matrix.GetColumn(3);
+			position.z = -position.z;
+
+			return position;
+		}
+
+		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
+		public static Quaternion __GetRotation(Matrix4x4 matrix)
+		{
+			// Convert from ARKit's right-handed coordinate
+			// system to Unity's left-handed
+			Quaternion rotation = __QuaternionFromMatrix(matrix);
+			rotation.z = -rotation.z;
+			rotation.w = -rotation.w;
+
+			return rotation;
+		}
+
+
+		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
+		static Quaternion __QuaternionFromMatrix(Matrix4x4 m)
+		{
+			// Adapted from: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
+			Quaternion q = new Quaternion();
+			q.w = Mathf.Sqrt(Mathf.Max(0, 1 + m[0, 0] + m[1, 1] + m[2, 2])) / 2;
+			q.x = Mathf.Sqrt(Mathf.Max(0, 1 + m[0, 0] - m[1, 1] - m[2, 2])) / 2;
+			q.y = Mathf.Sqrt(Mathf.Max(0, 1 - m[0, 0] + m[1, 1] - m[2, 2])) / 2;
+			q.z = Mathf.Sqrt(Mathf.Max(0, 1 - m[0, 0] - m[1, 1] + m[2, 2])) / 2;
+			q.x *= Mathf.Sign(q.x * (m[2, 1] - m[1, 2]));
+			q.y *= Mathf.Sign(q.y * (m[0, 2] - m[2, 0]));
+			q.z *= Mathf.Sign(q.z * (m[1, 0] - m[0, 1]));
+			return q;
+		}
+
+		public Vector3 GetPosition()
+		{
+			var LocalToWorld = GetLocalToWorld();
+			return __GetPosition(LocalToWorld);
+		}
+
+		public Quaternion GetRotation()
+		{
+			var LocalToWorld = GetLocalToWorld();
+			return __GetRotation(LocalToWorld);
+		}
+
+		public Matrix4x4 GetLocalToWorld()
 		{
 			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
 			var Row1 = new Vector4(LocalToWorld[4], LocalToWorld[5], LocalToWorld[6], LocalToWorld[7]);
@@ -77,10 +128,10 @@ namespace PopCap
 			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
 
 			var Transform = new Matrix4x4();
-			Transform.SetColumn(0, Row0);
-			Transform.SetColumn(1, Row1);
-			Transform.SetColumn(2, Row2);
-			Transform.SetColumn(3, Row3);
+			Transform.SetRow(0, Row0);
+			Transform.SetRow(1, Row1);
+			Transform.SetRow(2, Row2);
+			Transform.SetRow(3, Row3);
 			return Transform;
 			/*
 			var Transform = new Matrix4x4(Row0, Row1, Row2, Row3);
@@ -94,13 +145,7 @@ namespace PopCap
 			//Transform = 
 			return Transform.transpose;*/
 		}
-
-		public Matrix4x4 GetLocalToWorld()
-		{
-			var WorldToLocal = GetWorldToLocal();
-			return WorldToLocal.inverse;
-		}
-
+		
 		//	projection matrix
 		//	converts local space to image space, IntrinsicsCameraResolution, not 0..1
 		//	todo: make source transform to uv space
