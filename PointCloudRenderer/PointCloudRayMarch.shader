@@ -1,4 +1,4 @@
-﻿// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
 
 Shader "Panopoly/PointCloudRayMarch"
 {
@@ -98,8 +98,8 @@ Shader "Panopoly/PointCloudRayMarch"
 #define DEBUG_CAMERA_TEST_PLANE	(DebugCameraTestPlane>0.5f)
 			float FlipColourSample;
 			float FlipPositionSample;
-			#define FLIP_COLOUR_SAMPLE	(FlipColourSample>0.5f)
-			#define FLIP_POSITION_SAMPLE	(FlipPositionSample>0.5f)
+			#define FLIP_COLOUR_SAMPLE		true	//(FlipColourSample>0.5f)
+			#define FLIP_POSITION_SAMPLE	false	//(FlipPositionSample>0.5f)
 
 			float DebugColourDistanceMin;
 			float DebugColourDistanceMax;
