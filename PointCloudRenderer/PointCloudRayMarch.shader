@@ -182,6 +182,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				//	draw sphere at 0,0,0 in cameralocal space
 				float4 CameraCenterWorld = mul(WorldToLocalTransform,float4(0,0,0,1));
 				float3 CameraCenter = CameraCenterWorld.xyz / CameraCenterWorld.www;
+				Distance = 999;
 				if (DEBUG_CAMERA_CENTER)
 				{
 					float4 CameraCenterSphere = float4(CameraCenter,SphereRad);
