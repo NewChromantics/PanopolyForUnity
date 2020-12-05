@@ -340,8 +340,8 @@ Shader "Panopoly/PointCloudRayMarch"
 						continue;
 
 					//	gr: we're gettting z order issues, bail early if this is good enough
-					if ( BestDistance <= MaxHitDistance )
-						break;
+					//if ( BestDistance <= MaxHitDistance )
+					//	break;
 
 					BestDistance = HitDistance;
 					BestColour = HitColour;
