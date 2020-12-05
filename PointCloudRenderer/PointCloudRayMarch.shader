@@ -81,8 +81,10 @@ Shader "Panopoly/PointCloudRayMarch"
 			float SphereRad;
 
 			float MaxHitDistance;
+#define MinHitDistance	(MaxHitDistance*0.5f)
 			float EnableInsideDetection;
 			#define ENABLE_INSIDE_DETECTION	(EnableInsideDetection>0.5f)
+#define ENABLE_EARLY_Z_BREAK	true
 			float MarchNearDistance;
 			float MarchFarDistance;
 
@@ -340,8 +342,8 @@ Shader "Panopoly/PointCloudRayMarch"
 						continue;
 
 					//	gr: we're gettting z order issues, bail early if this is good enough
-					//if ( BestDistance <= MaxHitDistance )
-					//	break;
+					if ( ENABLE_EARLY_Z_BREAK && BestDistance <= MinHitDistance )
+						break;
 
 					BestDistance = HitDistance;
 					BestColour = HitColour;
