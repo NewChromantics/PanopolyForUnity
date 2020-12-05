@@ -37,7 +37,7 @@ float3 NormalToRedGreen(float Normal)
 {
 	if (Normal < 0.0)
 	{
-		return float3(0, 1, 1);
+		return float3(1, 0, 1);
 	}
 	if (Normal < 0.5)
 	{
