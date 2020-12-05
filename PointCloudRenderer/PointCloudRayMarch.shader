@@ -7,9 +7,6 @@ Shader "Panopoly/PointCloudRayMarch"
 		CloudPositions("CloudPositions", 2D) = "white" {}
 		CloudColours("CloudColours", 2D) = "white" {}
 		PointSize("PointSize",Range(0.001,0.05)) = 0.01
-		[Toggle]Billboard("Billboard", Range(0,1)) = 1
-		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
-		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
 
 		[Toggle]EnableInsideDetection("EnableInsideDetection",Range(0,1))=1
 		MaxHitDistance("MaxHitDistance",Range(0.001,0.2) ) = 0.001
