@@ -29,12 +29,22 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Billboard: 1
+    - CameraTestZ: 1.4
+    - DebugCameraCenter: 0
+    - DebugCameraColourDistanceToCamera: 0
+    - DebugCameraColourPosition: 0
+    - DebugCameraColourUv: 0
+    - DebugCameraTestPlane: 0
+    - DebugColourDistanceMax: 0.8
+    - DebugColourDistanceMin: 0.5
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
+    - FlipColourSample: 1
+    - FlipPositionSample: 0
     - LocalRayFarDepth: 1.414
     - LocalRayNearDepth: 0
-    - MaxHitDistance: 0.2
-    - MaxMarchDistance: 1.8
+    - MaxHitDistance: 0.014
+    - MaxMarchDistance: 0.8
     - PointSize: 0.01
     - SphereRad: 0
     - SphereX: 0
