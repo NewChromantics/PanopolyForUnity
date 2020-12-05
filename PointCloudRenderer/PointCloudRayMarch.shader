@@ -84,9 +84,10 @@ Shader "Panopoly/PointCloudRayMarch"
                 return o;
             }
 
+
 			bool IsInside01(float v)
 			{
-				return (v>=0) && (v<1.0);
+				return (v>0.0) && (v<1.0);
 			}
 
 			float Range(float Min,float Max,float Value)
@@ -101,9 +102,44 @@ Shader "Panopoly/PointCloudRayMarch"
 				return float2(x,y);
 			}
 
+
+			//	http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+			float sdSphere( float3 p, float s )
+			{
+				  return length(p)-s;
+			}
+
+			void GetDistance_TestSphere(float4 SphereWorld,float3 RayPosWorld,out float Distance,out float3 Colour)
+			{
+				//	test sphere in world space
+				float3 RayPosLocal = RayPosWorld - SphereWorld.xyz;
+				Distance = sdSphere(RayPosLocal,SphereWorld.w);
+
+				if ( Distance > SphereWorld.w )
+					return;
+					
+				//	calc norm of the point we hit
+				//	note: this is NOT the right normal. we should do 4x samples to get proper normal
+				float3 Normal = normalize(RayPosLocal);
+				Normal += 1;
+				Normal /= 2;
+
+				Colour = Normal;
+			}
+
+#define DEBUG_CAMERA_CENTER	true
 			bool GetDistance_ToProjection(float3 RayPosWorld,out float Distance,out float3 Colour)
 			{
-				//	gr: could this get camera uv then sample the position texture?
+				//	draw sphere at 0,0,0 in cameralocal space
+				if (DEBUG_CAMERA_CENTER)
+				{
+					float4 CameraCenterWorld = mul(WorldToLocalTransform,float4(0,0,0,1));
+					float3 CameraCenter = CameraCenterWorld.xyz / CameraCenterWorld.www;
+					float4 CameraCenterSphere = float4(CameraCenter,SphereRad);
+					GetDistance_TestSphere(CameraCenterSphere,RayPosWorld,Distance,Colour);
+					if ( Distance <= 0)
+						return true;
+				}
 
 				//	world -> cloud space
 				float4 RayPosCloud4 = mul(WorldToLocalTransform,float4(RayPosWorld,1));
@@ -116,6 +152,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				float2 RayPosCamera2 = RayPosCamera4.xy / RayPosCamera4.ww;	//	need to div by z too?
 				float2 RayPosUv = Range2( CameraToLocalViewportMin, CameraToLocalViewportMax, RayPosCamera2 );
 
+				//	gr: not sure why I need to flip
 				RayPosUv.y = 1.0 - RayPosUv.y;
 
 				//	out of view frustum
@@ -123,44 +160,22 @@ Shader "Panopoly/PointCloudRayMarch"
 					return false;
 
 				//	get world depth/pos (does this need transform?)
-				float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
-				Distance = distance( RayPosWorld, RayHitCloudPos.xyz );
+				//float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
+				//Distance = distance( RayPosWorld, RayHitCloudPos.xyz );
+				Distance = 0;
 				Colour = tex2D(CloudColours,RayPosUv);
 
 				return true;
 			}
 
 
-			//	http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
-			float sdSphere( float3 p, float s )
-			{
-				  return length(p)-s;
-			}
-
-			void GetDistance_TestSphere(float3 RayPosWorld,out float Distance,out float3 Colour)
-			{
-				//	test sphere in world space
-				float4 Sphere = float4(SphereX,SphereY,SphereZ,SphereRad);
-				float3 RayPosLocal = RayPosWorld - Sphere.xyz;
-				Distance = sdSphere(RayPosLocal,Sphere.w);
-
-				if ( Distance > Sphere.w )
-					return;
-					
-				//	calc norm of the point we hit
-				//	note: this is NOT the right normal. we should do 4x samples to get proper normal
-				float3 Normal = normalize(RayPosLocal);
-				Normal += 1;
-				Normal /= 2;
-
-				Colour = Normal;
-			}
 
 			void GetDistance(float3 RayPosWorld,out float Distance,out float3 Colour)
 			{
+				float4 DebugSphere = float4(SphereX,SphereY,SphereZ,SphereRad);
 				float SphereDistance;
 				float3 SphereColour;
-				GetDistance_TestSphere(RayPosWorld,SphereDistance,SphereColour);
+				GetDistance_TestSphere(DebugSphere,RayPosWorld,SphereDistance,SphereColour);
 
 				float CloudDistance;
 				float3 CloudColor;
@@ -171,8 +186,8 @@ Shader "Panopoly/PointCloudRayMarch"
 				}
 				else
 				{
-					Distance = SphereDistance;
-					Colour = SphereColour;
+					//Distance = SphereDistance;
+					//Colour = SphereColour;
 				}
 			}
 
