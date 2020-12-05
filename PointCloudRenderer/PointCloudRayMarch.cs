@@ -8,7 +8,21 @@ public class PointCloudRayMarch : MonoBehaviour
 
 	public void OnFrame(PopCap.TFrameMeta ColourMeta, Texture ColourTexture, PopCap.TFrameMeta DepthMeta, Texture PositionTexture)
 	{
-		//RayMarchMaterial.SetTexture("CloudPositions")
+		if (DepthMeta.Camera == null)
+		{
+			Debug.LogWarning("PointCloudRayMarch frame missing .Camera");
+			return;
+		}
+		if (DepthMeta.Camera.Intrinsics == null)
+		{
+			Debug.LogWarning("PointCloudRayMarch frame missing .Camera.Intrinsics");
+			return;
+		}
+		if (DepthMeta.Camera.LocalToWorld == null)
+		{
+			Debug.LogWarning("PointCloudRayMarch frame missing .Camera.LocalToWorld");
+			return;
+		}
 		RayMarchMaterial.SetVector("CameraToLocalViewportMin", DepthMeta.Camera.GetCameraSpaceViewportMin());
 		RayMarchMaterial.SetVector("CameraToLocalViewportMax", DepthMeta.Camera.GetCameraSpaceViewportMax());
 		RayMarchMaterial.SetMatrix("CameraToLocalTransform", DepthMeta.Camera.GetCameraToLocal());
