@@ -8,6 +8,9 @@ public class PointCloudRayMarch : MonoBehaviour
 
 	public void OnFrame(PopCap.TFrameMeta ColourMeta, Texture ColourTexture, PopCap.TFrameMeta DepthMeta, Texture PositionTexture)
 	{
+		if (!this.isActiveAndEnabled)
+			return;
+
 		if (DepthMeta.Camera == null)
 		{
 			Debug.LogWarning("PointCloudRayMarch frame missing .Camera");

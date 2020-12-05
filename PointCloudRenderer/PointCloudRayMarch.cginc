@@ -105,7 +105,10 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	//	out of view frustum (either uv should be out)
 	//	or behind camera
 	if ( !IsInside01(RayPosUv.x) || !IsInside01(RayPosUv.y) || RayPosCamera3.z < 0 )
+	{
+		Colour = float4(1,0,1,1);
 		return float4(0,0,0,0);
+	}
 
 	//	gr: not sure why I need to flip, I think normally we render bottom to top, but here we're in camera space...
 	float2 RayColourUv = RayPosUv;

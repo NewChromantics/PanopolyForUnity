@@ -7,9 +7,9 @@ public class MakeDumbMesh : MonoBehaviour
 {
 	public Mesh mesh;
 
-	[Range(2, 2048)]
+	[Range(2, 4096)]
 	public int PointCountWidth = 640;
-	[Range(2, 2048)]
+	[Range(2, 4096)]
 	public int PointCountHeight = 480;
 	public int PointCount { get { return PointCountWidth * PointCountHeight; } }
 	public int VertexCount { get { return PointCount * 3; } }
