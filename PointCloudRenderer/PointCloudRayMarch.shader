@@ -40,8 +40,8 @@ Shader "Panopoly/PointCloudRayMarch"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
+
+			//#define ENABLE_CAMERA_DEBUG
 
             #include "UnityCG.cginc"
 
@@ -91,11 +91,13 @@ Shader "Panopoly/PointCloudRayMarch"
 			float DebugCameraColourPosition;
 			float DebugCameraCenter;
 			float DebugCameraTestPlane;
+
 #define DEBUG_COLOUR_UV		(DebugCameraColourUv>0.5f)
 #define DEBUG_COLOUR_DISTANCE_TO_CAMERA	(DebugCameraColourDistanceToCamera>0.5f)
 #define DEBUG_COLOUR_POSITION	(DebugCameraColourPosition>0.5f)
 #define DEBUG_CAMERA_CENTER	(DebugCameraCenter>0.5f)
 #define DEBUG_CAMERA_TEST_PLANE	(DebugCameraTestPlane>0.5f)
+
 			float FlipColourSample;
 			float FlipPositionSample;
 			#define FLIP_COLOUR_SAMPLE		true	//(FlipColourSample>0.5f)
@@ -183,6 +185,8 @@ Shader "Panopoly/PointCloudRayMarch"
 				float4 CameraCenterWorld = mul(WorldToLocalTransform,float4(0,0,0,1));
 				float3 CameraCenter = CameraCenterWorld.xyz / CameraCenterWorld.www;
 				Distance = 999;
+
+#if defined(ENABLE_CAMERA_DEBUG)
 				if (DEBUG_CAMERA_CENTER)
 				{
 					float4 CameraCenterSphere = float4(CameraCenter,SphereRad);
@@ -190,6 +194,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					if ( Distance <= 0)
 						return true;
 				}
+#endif
 
 				//	world -> cloud space
 				float4 RayPosCloud4 = mul(WorldToLocalTransform,float4(RayPosWorld,1));
@@ -199,15 +204,16 @@ Shader "Panopoly/PointCloudRayMarch"
 				float4 RayPosCamera4 = mul(LocalToCameraTransform,float4(RayPosCloud4.xyz,1));
 				float3 RayPosCamera3 = RayPosCamera4.xyz / RayPosCamera4.www;
 
-				//	behind camera
-				if ( RayPosCamera3.z < 0 )
-					return false;
-
 				//	camera image space to uv
 				//	gr: do I div or mult by z
 				//	gr: by checking distance against a Z, we can see this needs to be /z
 				float2 RayPosCamera2 = RayPosCamera3.xy / RayPosCamera3.zz;
 				float2 RayPosUv = Range2( CameraToLocalViewportMin, CameraToLocalViewportMax, RayPosCamera2 );
+
+				//	out of view frustum (either uv should be out)
+				//	or behind camera
+				if ( !IsInside01(RayPosUv.x) || !IsInside01(RayPosUv.y) || RayPosCamera3.z < 0 )
+					return false;
 
 				//	gr: not sure why I need to flip, I think normally we render bottom to top, but here we're in camera space...
 				float2 RayColourUv = RayPosUv;
@@ -216,15 +222,12 @@ Shader "Panopoly/PointCloudRayMarch"
 				if ( FLIP_POSITION_SAMPLE )
 					RayPosUv.y = 1.0 - RayPosUv.y;
 
-				//	out of view frustum (either uv should be out)
-				if ( !IsInside01(RayPosUv.x) || !IsInside01(RayPosUv.y) )
-					return false;
-
 				//	get world depth/pos (does this need transform?)
 				float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
 				Distance = distance( RayPosWorld, RayHitCloudPos.xyz );
 				Colour = tex2D(CloudColours,RayColourUv);
 
+#if defined(ENABLE_CAMERA_DEBUG)
 				if ( DEBUG_COLOUR_UV )
 				{
 					Colour = float3(RayPosUv,0);
@@ -245,7 +248,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					Distance = 0;
 					Distance = abs(RayPosCamera3.z - CameraTestZ);
 				}
-
+#endif
 				return true;
 			}
 
@@ -253,6 +256,9 @@ Shader "Panopoly/PointCloudRayMarch"
 
 			void GetDistance(float3 RayPosWorld,out float Distance,out float3 Colour)
 			{
+				GetDistance_ToProjection( RayPosWorld, Distance, Colour );
+				return;
+
 				float4 DebugSphere = float4(SphereX,SphereY,SphereZ,SphereRad);
 				float SphereDistance;
 				float3 SphereColour;
@@ -267,10 +273,11 @@ Shader "Panopoly/PointCloudRayMarch"
 				}
 				else
 				{
-					//Distance = 999;
+					Distance = 999;
 					//Distance = SphereDistance;
 					//Colour = SphereColour;
 				}
+
 			}
 
 
