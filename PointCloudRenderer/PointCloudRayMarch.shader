@@ -31,6 +31,16 @@ Shader "Panopoly/PointCloudRayMarch"
 		DebugColourDistanceMax("DebugColourDistanceMax",Range(0,10)) = 5
 		[Toggle]FlipColourSample("FlipColourSample",Range(0,1)) = 1
 		[Toggle]FlipPositionSample("FlipPositionSample",Range(0,1)) = 1
+
+		//[Header("Relative to MaxHitDistance, what do we count towards ambient occulusion")]
+		AoMaxDistance("AoMaxDistance",Range(0,1) ) = 0.1
+		[Toggle]ApplyAmbientOcclusion("ApplyAmbientOcclusion", Range(0,1))=0
+		[Toggle]DebugAo("DebugAo", Range(0,1)) = 0
+		StepHeatMin("StepHeatMin",Range(0,0.5)) = 0
+		StepHeatMax("StepHeatMax",Range(0,0.5)) = 1
+		//[Header("Colour multiply")]
+		AmbientOcclusionMultMin("AmbientOcclusionMultMin",Range(0,1)) = 0
+		AmbientOcclusionMultMax("AmbientOcclusionMultMax",Range(0,1)) = 1
     }
     SubShader
     {
@@ -83,6 +93,16 @@ Shader "Panopoly/PointCloudRayMarch"
 #define ENABLE_EARLY_Z_BREAK	true
 			float MarchNearDistance;
 			float MarchFarDistance;
+
+			float DebugAo;
+			#define DEBUG_AO_COLOUR	(DebugAo>0.5f)
+			float AoMaxDistance;
+			float StepHeatMin;
+			float StepHeatMax;
+			float ApplyAmbientOcclusion;	
+			#define APPLY_AMBIENT_OCCLUSION	(ApplyAmbientOcclusion>0.5f)
+			float AmbientOcclusionMultMin;
+			float AmbientOcclusionMultMax;
 
 			
             v2f vert (appdata v)
@@ -190,6 +210,8 @@ Shader "Panopoly/PointCloudRayMarch"
 				float BestDistance = 99;
 				float3 BestColour = float3(0,1,1);
 
+				float StepHeat = 0;
+
 				float RayStep = distance(RayMarchEnd,RayMarchStart) / float(MARCH_STEPS);
 				float RayDistance = 0;	//	this is ray time, but now in worldspace units
 				for ( int i=0;	i<MARCH_STEPS;	i++ )
@@ -199,6 +221,12 @@ Shader "Panopoly/PointCloudRayMarch"
 					float HitDistance = 999;
 					float3 HitColour;
 					GetDistance(RayPosition,HitDistance,HitColour);
+
+					//	normally step heat += 1 for every near miss
+					//	but we're always stepping, so increase by inverse distance, so only count heat
+					//	where we werent miles from something
+					float HeatDistance = min(HitDistance,AoMaxDistance);
+					StepHeat += 1 - (HeatDistance/AoMaxDistance);
 
 					//	step ray forward
 					//	allow smaller steps
@@ -223,6 +251,21 @@ Shader "Panopoly/PointCloudRayMarch"
 				//	didn't get close enough to anything
 				if ( BestDistance > MaxHitDistance )
 					discard;
+
+
+				if ( DEBUG_AO_COLOUR || APPLY_AMBIENT_OCCLUSION )
+				{
+					//	make stepheat relative to total so these settings are step-agnostic
+					StepHeat /= float(MARCH_STEPS);
+					//	bigger number = more heat = red rather than green
+					StepHeat = 1.0 - Range(StepHeatMin,StepHeatMax,StepHeat);
+
+					if ( DEBUG_AO_COLOUR )
+						return float4(NormalToRedGreen(StepHeat),1);
+
+					float Mult = lerp(AmbientOcclusionMultMin,AmbientOcclusionMultMax,StepHeat);
+					BestColour *= Mult;
+				}
 		
                 return float4(BestColour,1.0);
                 //return float4(i.WorldPosition,1.0);
