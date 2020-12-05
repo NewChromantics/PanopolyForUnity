@@ -11,13 +11,15 @@ Shader "Panopoly/PointCloudRayMarch"
 		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
 
+		[Toggle]EnableInsideDetection("EnableInsideDetection",Range(0,1))=1
+		MaxHitDistance("MaxHitDistance",Range(0.001,0.2) ) = 0.001
+		MarchNearDistance("MarchNearDistance",Range(-1,10) ) = 0
+		MarchFarDistance("MarchFarDistance",Range(-1,10) ) = 5
+
 		SphereX("SphereX",Range(-2,2)) = 0
 		SphereY("SphereY",Range(-2,2)) = 0
 		SphereZ("SphereZ",Range(-2,2)) = 0
 		SphereRad("SphereRad",Range(0,1)) = 0.1
-
-		MaxHitDistance("MaxHitDistance",Range(0,0.2) ) = 0.001
-		MaxMarchDistance("MaxMarchDistance",Range(0.001,10) ) = 5
 
 		CameraTestZ("CameraTestZ",Range(0,10)) = 0.3
 		[Toggle]DebugCameraColourUv("DebugCameraColourUv",Range(0,1)) = 0
@@ -34,6 +36,7 @@ Shader "Panopoly/PointCloudRayMarch"
     {
         Tags { "RenderType"="Opaque" }
         LOD 100
+		Cull Off
 
         Pass
         {
@@ -56,6 +59,7 @@ Shader "Panopoly/PointCloudRayMarch"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+				float3 normal : NORMAL;
             };
 
             struct v2f
@@ -63,6 +67,7 @@ Shader "Panopoly/PointCloudRayMarch"
                 float3 WorldPosition : TEXCOORD1;
                 float3 LocalPosition : TEXCOORD2;
                 float4 vertex : SV_POSITION;
+				half3 WorldNormal : TEXCOORD3;
             };
 
 			sampler2D CloudPositions;
@@ -76,7 +81,11 @@ Shader "Panopoly/PointCloudRayMarch"
 			float SphereRad;
 
 			float MaxHitDistance;
-			float MaxMarchDistance;
+			float EnableInsideDetection;
+			#define ENABLE_INSIDE_DETECTION	(EnableInsideDetection>0.5f)
+			float MarchNearDistance;
+			float MarchFarDistance;
+
 
 			//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
 			float3 CameraToLocalViewportMin;
@@ -113,6 +122,7 @@ Shader "Panopoly/PointCloudRayMarch"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.WorldPosition = UnityObjectToWorldPos(v.vertex);
                 o.LocalPosition = (v.vertex);
+				o.WorldNormal = normalize(UnityObjectToWorldNormal(v.normal));
                 return o;
             }
 
@@ -288,46 +298,41 @@ Shader "Panopoly/PointCloudRayMarch"
                 //  get ray from camera to frag surface point (our only world reference) gives us a ray
                 float4 CameraPos4 = float4( _WorldSpaceCameraPos, 1 );
 				float3 CameraPosLocal = mul( unity_WorldToObject, CameraPos4 );
-				//float3 RayDirection = normalize(ObjSpaceViewDir( float4(input.LocalPosition,1) ));
-				//float3 RayPosition = input.LocalPosition;
-				float3 RayDirection = input.WorldPosition - CameraPos4.xyz;
-				float3 RayPosition = input.WorldPosition;
+				float3 RayDirection = normalize(input.WorldPosition - CameraPos4.xyz);
 				//	we want ray AWAY from the camera
 				RayDirection *= -1;
 
+				bool Inside = ENABLE_INSIDE_DETECTION && dot(input.WorldNormal,RayDirection) <= 0;
 
+				//	hardcoded to unroll loop									
+				#define MARCH_STEPS 100
 
-                
-					
-				//	start BEHIND for when we're INSIDE the bounds
-				//	should auto determine this (ie, if we're looking at a backface)
-				#if defined(TARGET_MOBILE)
-					#define FORWARD_MARCHES		10
-					#define BACKWARD_MARCHES	4
-				#else
-					#define FORWARD_MARCHES		200
-					#define BACKWARD_MARCHES	10
-				#endif
+				//	ray needs to start at the camera if we're INSIDE the shape, otherwise frag pos is the backface
+				//	gr: if we're inside, we could force the far distance to be the ray pos, then we won't draw
+				//		past the geometry in world space	MarchFarDistance = 
+				float3 RayEyeStart = Inside ? _WorldSpaceCameraPos : input.WorldPosition;
+				float3 RayMarchDir = -RayDirection;//normalize(input.WorldPosition - RayEyeStart);
 
-
-				#define MAX_HITDISTANCE	MaxHitDistance	//	gr: need to make this smarter 
-				#define MAX_MARCH_DISTANCE MaxMarchDistance	//	need to find the far bounds or something
-				float3 RayMarchStart = RayPosition;//_WorldSpaceCameraPos;
-				float3 RayMarchDir = normalize(input.WorldPosition - _WorldSpaceCameraPos);
-				float3 RayMarchEnd = RayMarchStart + ( RayMarchDir * MAX_MARCH_DISTANCE );
+				float3 RayMarchStart = RayEyeStart + (RayMarchDir * MarchNearDistance);
+				float3 RayMarchEnd = RayEyeStart + (RayMarchDir * MarchFarDistance);
 
 				float BestDistance = 99;
-				float3 BestColour;
+				float3 BestColour = float3(0,1,1);
 
-				[unroll(210)]
-				for ( int i=-BACKWARD_MARCHES;	i<FORWARD_MARCHES;	i++ )
+				float RayStep = distance(RayMarchEnd,RayMarchStart) / float(MARCH_STEPS);
+				float RayDistance = 0;	//	this is ray time, but now in worldspace units
+				for ( int i=0;	i<MARCH_STEPS;	i++ )
 				{
-					float t = i/(float)FORWARD_MARCHES;
-					float3 RayPosition = lerp( RayMarchStart, RayMarchEnd, t );
+					float3 RayPosition = RayMarchStart + (RayMarchDir*RayDistance);
 
 					float HitDistance = 999;
 					float3 HitColour;
 					GetDistance(RayPosition,HitDistance,HitColour);
+
+					//	step ray forward
+					//	allow smaller steps
+					//	gr: for our heightmap stepping, if this is <step, we may want to step backwards
+					RayDistance += min( HitDistance, RayStep );
 
 					//	gr; move t along by distance, normally, but we need fixed step for this
 					//	worse than current best
@@ -338,7 +343,10 @@ Shader "Panopoly/PointCloudRayMarch"
 					BestColour = HitColour;
 				}
 
-				if ( BestDistance > MAX_HITDISTANCE )
+				//	max distance can only be the (far-near) distance now
+				//if ( BestDistance > MarchFarDistance )
+				//	didn't get close enough to anything
+				if ( BestDistance > MaxHitDistance )
 					discard;
 		
                 return float4(BestColour,1.0);

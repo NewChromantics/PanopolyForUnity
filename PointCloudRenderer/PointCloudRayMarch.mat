@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PointCloudRayMarch
   m_Shader: {fileID: 4800000, guid: 835925dc60f51486f90304e050f3125e, type: 3}
-  m_ShaderKeywords: BILLBOARD_ON
+  m_ShaderKeywords: BILLBOARD_ON ENABLE_CAMERA_DEBUG
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -39,12 +39,13 @@ Material:
     - DebugColourDistanceMin: 0.5
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
+    - EnableCameraDebug: 1
     - FlipColourSample: 1
     - FlipPositionSample: 0
     - LocalRayFarDepth: 1.414
     - LocalRayNearDepth: 0
-    - MaxHitDistance: 0.014
-    - MaxMarchDistance: 0.8
+    - MaxHitDistance: 0.008
+    - MaxMarchDistance: 0.7
     - PointSize: 0.01
     - SphereRad: 0
     - SphereX: 0
