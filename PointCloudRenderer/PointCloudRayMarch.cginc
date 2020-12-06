@@ -111,14 +111,37 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	}
 
 	//	gr: not sure why I need to flip, I think normally we render bottom to top, but here we're in camera space...
-	float2 RayColourUv = RayPosUv;
-	if ( FLIP_COLOUR_SAMPLE )
-		RayColourUv.y = 1.0 - RayColourUv.y;
 	if ( FLIP_POSITION_SAMPLE )
 		RayPosUv.y = 1.0 - RayPosUv.y;
 
 	//	get world depth/pos (does this need transform?)
-	float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
+
+	//	gr: do multiple samples to find nearest
+	float4 RayHitCloudPos = float4(0,0,0,0);
+	float2 RayHitUv = RayPosUv;
+	float RayHitCloudDistance=999;
+	#define SampleRadius	2
+	for ( int y=-SampleRadius;	y<=SampleRadius;	y++ )
+	{
+		for ( int x=-SampleRadius;	x<=SampleRadius;	x++ )
+		{
+			float2 uvoff = float2(x,y) * CloudPositions_texelSize.xy;
+			float4 HitPosition = tex2D(CloudPositions,RayPosUv+uvoff);
+			float HitDistance = lerp( 999.0f, distance(RayPosWorld,HitPosition), HitPosition.w);
+
+			float UseResult = ( HitDistance < RayHitCloudDistance ) ? 1 : 0;
+			RayHitCloudPos = lerp( RayHitCloudPos, HitPosition, UseResult);
+			RayHitCloudDistance = lerp( RayHitCloudDistance, HitDistance, UseResult);
+			RayHitUv = lerp( RayHitUv, RayPosUv+uvoff, UseResult);
+		}
+	}
+	//float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
+
+
+	float2 RayColourUv = RayHitUv;
+	if ( FLIP_COLOUR_SAMPLE )
+		RayColourUv.y = 1.0 - RayColourUv.y;
+
 	Colour = tex2D(CloudColours,RayColourUv);
 
 #if defined(ENABLE_CAMERA_DEBUG)

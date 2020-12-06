@@ -211,7 +211,8 @@ Shader "Panopoly/PointCloudRayMarch"
 
 				float RayStep = distance(RayMarchEnd,RayMarchStart) / float(MARCH_STEPS);
 				float RayDistance = 0;	//	this is ray time, but now in worldspace units
-				for ( int i=0;	i<MARCH_STEPS;	i++ )
+				//[unroll(MARCH_STEPS)]
+				for ( int i=0;	i<50;	i++)//MARCH_STEPS;	i++ )
 				{
 					float3 RayPosition = RayMarchStart + (RayMarchDir*RayDistance);
 
