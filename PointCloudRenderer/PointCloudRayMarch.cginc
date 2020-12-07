@@ -1,7 +1,7 @@
 sampler2D CloudPositions;
 sampler2D CloudColours;
-float4 CloudPositions_texelSize;
-float4 CloudColours_texelSize;
+float4 CloudPositions_TexelSize;
+float4 CloudColours_TexelSize;
 
 
 //	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
@@ -128,7 +128,7 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 		{
 			for ( int x=-SampleRadius;	x<=SampleRadius;	x++ )
 			{
-				float2 uvoff = float2(x,y) * CloudPositions_texelSize.xy;
+				float2 uvoff = float2(x,y) * CloudPositions_TexelSize.xy;
 				float4 HitPosition = tex2D(CloudPositions,RayPosUv+uvoff);
 				float HitDistance = lerp( 999.0f, distance(RayPosWorld,HitPosition), HitPosition.w);
 
