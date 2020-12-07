@@ -9,7 +9,8 @@
 		[Toggle]Billboard("Billboard", Range(0,1)) = 1
 		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
-
+MaxSdfDistance("MaxSdfDistance",Range(0,0.2))=1
+RenderSdfMinScore("RenderSdfMinScore",Range(0,1))=1
     }
     SubShader
     {
@@ -65,13 +66,13 @@
 				//	position in camera space
 				float3 CameraPosition;
 				float2 ColourUv = float2(0,0);
-				float Validf = 1;
+				float Validf = 0;
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
 				float4 OverrideColour = float4(0,0,0,IS_SDF?1:0);
 
 				if ( IS_SDF )
-					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz );
+					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, Validf );
 				else 
 					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, ColourUv, Validf);
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
