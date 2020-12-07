@@ -119,23 +119,28 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	//	gr: do multiple samples to find nearest
 	float4 RayHitCloudPos = float4(0,0,0,0);
 	float2 RayHitUv = RayPosUv;
-	float RayHitCloudDistance=999;
-	#define SampleRadius	2
-	for ( int y=-SampleRadius;	y<=SampleRadius;	y++ )
-	{
-		for ( int x=-SampleRadius;	x<=SampleRadius;	x++ )
-		{
-			float2 uvoff = float2(x,y) * CloudPositions_texelSize.xy;
-			float4 HitPosition = tex2D(CloudPositions,RayPosUv+uvoff);
-			float HitDistance = lerp( 999.0f, distance(RayPosWorld,HitPosition), HitPosition.w);
 
-			float UseResult = ( HitDistance < RayHitCloudDistance ) ? 1 : 0;
-			RayHitCloudPos = lerp( RayHitCloudPos, HitPosition, UseResult);
-			RayHitCloudDistance = lerp( RayHitCloudDistance, HitDistance, UseResult);
-			RayHitUv = lerp( RayHitUv, RayPosUv+uvoff, UseResult);
+/*
+	#define SampleRadius	3
+	{
+		float RayHitCloudDistance=999;
+		for ( int y=-SampleRadius;	y<=SampleRadius;	y++ )
+		{
+			for ( int x=-SampleRadius;	x<=SampleRadius;	x++ )
+			{
+				float2 uvoff = float2(x,y) * CloudPositions_texelSize.xy;
+				float4 HitPosition = tex2D(CloudPositions,RayPosUv+uvoff);
+				float HitDistance = lerp( 999.0f, distance(RayPosWorld,HitPosition), HitPosition.w);
+
+				float UseResult = ( HitDistance < RayHitCloudDistance ) ? 1 : 0;
+				RayHitCloudPos = lerp( RayHitCloudPos, HitPosition, UseResult);
+				RayHitCloudDistance = lerp( RayHitCloudDistance, HitDistance, UseResult);
+				RayHitUv = lerp( RayHitUv, RayPosUv+uvoff, UseResult);
+			}
 		}
 	}
-	//float4 RayHitCloudPos = tex2D(CloudPositions,RayPosUv);
+*/
+	RayHitCloudPos = tex2D(CloudPositions,RayHitUv);
 
 
 	float2 RayColourUv = RayHitUv;
@@ -167,5 +172,5 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	}
 */
 #endif
-	return float4(RayHitCloudPos.xyz,1);
+	return float4(RayHitCloudPos);
 }
