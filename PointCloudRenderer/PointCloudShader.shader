@@ -3,6 +3,7 @@
     Properties
     {
 		CloudPositions("CloudPositions", 2D) = "white" {}
+		[Toggle]CloudPositionsAreSdf("CloudPositionsAreSdf",Range(0,1))=0
 		CloudColours("CloudColours", 2D) = "white" {}
 		PointSize("PointSize",Range(0.001,0.05)) = 0.01
 		[Toggle]Billboard("Billboard", Range(0,1)) = 1
@@ -55,24 +56,32 @@
 
 			//float4x4 CameraToWorld;
 
+			float CloudPositionsAreSdf;
+#define IS_SDF	(CloudPositionsAreSdf>0.5f)
+
 
             v2f vert (appdata v)
             {
 				//	position in camera space
 				float3 CameraPosition;
-				float2 ColourUv;
+				float2 ColourUv = float2(0,0);
 				float Validf = 1;
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
-				Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, ColourUv, Validf);
+				float4 OverrideColour = float4(0,0,0,IS_SDF?1:0);
+
+				if ( IS_SDF )
+					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz );
+				else 
+					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, ColourUv, Validf);
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
-				bool Valid = Validf > 0.5;
+				bool Valid = Validf > 0;
 
 				//	gr: here, do billboarding, and repalce below with UnityWorldToClipPos
 				v2f o;
 				o.vertex = UnityObjectToClipPos(CameraPosition);
                 o.uv = ColourUv;
-				o.OverrideColour = float4(0, 0, 0, 0);
+				o.OverrideColour = OverrideColour;
 				
 				if (!Valid && DEBUG_INVALIDPOSITIONS)
 				{
