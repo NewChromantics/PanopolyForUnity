@@ -120,7 +120,7 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	float4 RayHitCloudPos = float4(0,0,0,0);
 	float2 RayHitUv = RayPosUv;
 
-/*
+
 	#define SampleRadius	3
 	{
 		float RayHitCloudDistance=999;
@@ -139,8 +139,8 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 			}
 		}
 	}
-*/
-	RayHitCloudPos = tex2D(CloudPositions,RayHitUv);
+
+	//RayHitCloudPos = tex2D(CloudPositions,RayHitUv);
 
 
 	float2 RayColourUv = RayHitUv;
