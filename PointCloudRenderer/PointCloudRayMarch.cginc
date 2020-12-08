@@ -71,6 +71,14 @@ float2 Range2(float2 Min,float2 Max,float2 Value)
 	return float2(x,y);
 }
 
+float3 Range3(float3 Min,float3 Max,float3 Value)
+{
+	float x = Range(Min.x,Max.x,Value.x);
+	float y = Range(Min.y,Max.y,Value.y);
+	float z = Range(Min.z,Max.z,Value.z);
+	return float3(x,y,z);
+}
+
 //	w = obviously in/valid
 float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 {

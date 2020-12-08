@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PointCloudRayMarch
   m_Shader: {fileID: 4800000, guid: 835925dc60f51486f90304e050f3125e, type: 3}
-  m_ShaderKeywords: APPLYAMBIENTOCCLUSION_ON BILLBOARD_ON ENABLEINSIDEDETECTION_ON
+  m_ShaderKeywords: BILLBOARD_ON CLOUDPOSITIONSARESDF_ON ENABLEINSIDEDETECTION_ON
     ENABLE_CAMERA_DEBUG
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -25,7 +25,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - CloudPositions:
-        m_Texture: {fileID: 8400000, guid: a4de806843a704967a7983baf5d19c32, type: 2}
+        m_Texture: {fileID: 8400000, guid: 28e10d6d4698643e68a127b318d88eaa, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
@@ -33,9 +33,10 @@ Material:
     - AmbientOcclusionMultMin: 0.3
     - AoMax: 1.57
     - AoMaxDistance: 0.08
-    - ApplyAmbientOcclusion: 1
+    - ApplyAmbientOcclusion: 0
     - Billboard: 1
     - CameraTestZ: 1.4
+    - CloudPositionsAreSdf: 1
     - DebugAo: 0
     - DebugCameraCenter: 0
     - DebugCameraColourDistanceToCamera: 0
@@ -52,9 +53,9 @@ Material:
     - FlipPositionSample: 0
     - LocalRayFarDepth: 1.414
     - LocalRayNearDepth: 0
-    - MarchFarDistance: 0.6
-    - MarchNearDistance: 0
-    - MaxHitDistance: 0.018
+    - MarchFarDistance: 0.7
+    - MarchNearDistance: 0.09
+    - MaxHitDistance: 0.003
     - MaxMarchDistance: 0.4
     - PointSize: 0.01
     - SphereRad: 0
@@ -63,4 +64,6 @@ Material:
     - SphereZ: 0.12
     - StepHeatMax: 0.137
     - StepHeatMin: 0
-    m_Colors: []
+    m_Colors:
+    - WorldBoundsMax: {r: 0.3199712, g: -0.2061894, b: 0.6646888, a: 1}
+    - WorldBoundsMin: {r: -0.3776007, g: -0.5, b: 0.1195125, a: 1}

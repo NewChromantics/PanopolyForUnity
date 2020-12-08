@@ -8,6 +8,11 @@ Shader "Panopoly/PointCloudRayMarch"
 		CloudColours("CloudColours", 2D) = "white" {}
 		PointSize("PointSize",Range(0.001,0.05)) = 0.01
 
+		[Toggle]CloudPositionsAreSdf("CloudPositionsAreSdf",Range(0,1))=0
+        WorldBoundsMin("WorldBoundsMin",Vector) = (0,0,0)
+        WorldBoundsMax("WorldBoundsMax",Vector) = (1,1,1)
+
+
 		[Toggle]EnableInsideDetection("EnableInsideDetection",Range(0,1))=1
 		MaxHitDistance("MaxHitDistance",Range(0.001,0.2) ) = 0.001
 		MarchNearDistance("MarchNearDistance",Range(-1,10) ) = 0
@@ -76,6 +81,7 @@ Shader "Panopoly/PointCloudRayMarch"
                 float3 LocalPosition : TEXCOORD2;
                 float4 vertex : SV_POSITION;
 				half3 WorldNormal : TEXCOORD3;
+				int BlockDepth : TEXCOORD4;
             };
 
 			float SphereX;
@@ -101,6 +107,21 @@ Shader "Panopoly/PointCloudRayMarch"
 			float AmbientOcclusionMultMin;
 			float AmbientOcclusionMultMax;
 
+
+			#define MAP_TEXTURE_WIDTH    (CloudPositions_TexelSize.z)
+            #define MAP_TEXTURE_HEIGHT   (CloudPositions_TexelSize.w)
+
+			//  gr: make sure these are integers!
+			#define CALC_BLOCKDEPTH int( floor( sqrt(MAP_TEXTURE_HEIGHT) ) )
+            #define BLOCKWIDTH  90//(MAP_TEXTURE_WIDTH)
+            #define BLOCKDEPTH  90//(g_BlockDepth) //  gr: ditch the extra param and calculate it as sqrt instead
+            #define BLOCKHEIGHT (int(MAP_TEXTURE_HEIGHT / float(BLOCKDEPTH)))
+
+			//	distance written in the sdf writer, so we can(?) assume there's this much gap to next
+			float MaxSdfDistance;
+			float3 WorldBoundsMin;
+			float3 WorldBoundsMax;
+
 			
             v2f vert (appdata v)
             {
@@ -109,25 +130,144 @@ Shader "Panopoly/PointCloudRayMarch"
                 o.WorldPosition = UnityObjectToWorldPos(v.vertex);
                 o.LocalPosition = (v.vertex);
 				o.WorldNormal = normalize(UnityObjectToWorldNormal(v.normal));
+				o.BlockDepth = CALC_BLOCKDEPTH;
                 return o;
             }
 
 
-			//	http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+			float udBox(float3 p,float3 b)
+			{
+				return length(max(abs(p)-b,0.0));
+			}
+
 			float sdSphere( float3 p, float s )
 			{
 				  return length(p)-s;
 			}
 
-			void GetDistance_TestSphere(float4 SphereWorld,float3 RayPosWorld,out float Distance,out float3 Colour)
+			float sdBox(float3 p,float3 b )
+			{
+				float3 q = abs(p) - b;
+				return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+			}
+
+
+			struct MarchMeta_t
+			{
+				int BlockDepth;
+			};
+
+			int3 PointCloudMapUvToXyz(float2 uv,int g_BlockDepth)
+            {
+                int x = uv.x * BLOCKWIDTH;
+                int Row = uv.y * BLOCKHEIGHT * BLOCKDEPTH;
+                int y = Row % BLOCKHEIGHT;
+                int z = Row / BLOCKHEIGHT;
+                return int3(x,y,z);
+            }
+
+			//	non-int so we can do subsampling
+			float2 PointCloudMapXyzToUv(float3 xyz,int g_BlockDepth)
+            {
+				float u = xyz.x / float(BLOCKWIDTH);
+
+				//	z needs to round to blocks
+				float pz = floor( xyz.z ) / float(BLOCKDEPTH);
+
+				//	how high is the texture
+				float TextureSampleHeight = float(BLOCKHEIGHT * BLOCKDEPTH) / float(MAP_TEXTURE_HEIGHT);
+
+				float py = xyz.y / float(BLOCKHEIGHT);
+				//	y sample is within 1 height section	
+				py = py / float(BLOCKDEPTH);
+
+				float v = pz + py;
+
+				//	normalise from 0..1 to 0..h, inside texture height (which is our sqrt rounding error/alignment like 8000/8100)
+				v *= TextureSampleHeight;
+
+				return float2(u,v);
+            }
+
+			float2 PointCloudMapXyzNormToUv(float3 xyz,int g_BlockDepth,out float3 InternalXyz)
+            {
+				float3 Blockwhd = float3(BLOCKWIDTH,BLOCKHEIGHT,BLOCKDEPTH);
+
+
+				//	0..1 needs converting, because Y & Z don't neccessarly align to pixels
+				float x = xyz.x * float(BLOCKWIDTH);
+				//	z needs to be on the correct plane. maybe here we should blend between 2 planes
+				int z = xyz.z * float(BLOCKDEPTH);
+				float y = xyz.y * float(BLOCKHEIGHT);
+				float2 SampleUv = PointCloudMapXyzToUv( float3(x,y,z), g_BlockDepth );
+				
+				//	convert to uv and back, as we know that uv->xyz is correct
+				int3 InternalXyz_i = PointCloudMapUvToXyz(SampleUv, g_BlockDepth);
+				InternalXyz = InternalXyz_i / Blockwhd;
+				//InternalXyz = floor(xyz*Blockwhd)/Blockwhd;
+
+				return SampleUv;
+            }
+			
+			float GetDistance_SdfCloudLocal(float3 RayPosLocal,out float3 Colour,MarchMeta_t MarchMeta)
+			{
+				float3 InternalXyz;
+				float2 SampleUv = PointCloudMapXyzNormToUv(RayPosLocal,MarchMeta.BlockDepth,InternalXyz);
+				float4 Sample = tex2D( CloudPositions, SampleUv );
+				//	w is distance
+				Colour = Sample.xyz;
+				//Colour = Sample.www;
+				//Colour = RayPosLocal;
+
+				//Colour = InternalXyz;
+				//Colour = NormalToRedGreen(SampleUv.y);
+				//Colour = NormalToRedGreen(InternalXyz.yyy);
+
+				float3 Blockwhd = float3(BLOCKWIDTH,BLOCKHEIGHT,BLOCKDEPTH);
+				float3 WorkingInternalXyz = floor(RayPosLocal*Blockwhd)/Blockwhd;
+
+
+				//return sdSphere(RayPosLocal-InternalXyz,SphereRad);
+				//return distance(RayPosLocal,WorkingInternalXyz);
+
+				return Sample.w;
+			}
+
+		
+
+			float GetDistance_SdfCloud(float3 RayPosWorld,out float3 Colour,MarchMeta_t MarchMeta)
+			{
+				float3 BoxCenter = lerp(WorldBoundsMin,WorldBoundsMax,0.5f);
+				float DistanceToBounds = sdBox( RayPosWorld-BoxCenter, (WorldBoundsMax-WorldBoundsMin)*0.5f );
+
+				
+				//	get local space xyz
+				float3 Cloudxyz = Range3( WorldBoundsMin, WorldBoundsMax, RayPosWorld );
+				Colour = Cloudxyz;
+				//return sdSphere(RayPosWorld-BoxCenter,SphereRad);
+
+				if ( !IsInside01(Cloudxyz.x) || !IsInside01(Cloudxyz.y) || !IsInside01(Cloudxyz.z) )
+				{
+					//	todo: if outside, return distance to bounds edge
+					Colour = float3(0,0,1);
+					//	gr: intead of stepping inside, it should read distance at the edge-sample
+					return DistanceToBounds+0.01;	//	step inside
+				}
+
+				//return DistanceToBounds;
+
+				float LocalDistance = GetDistance_SdfCloudLocal(Cloudxyz,Colour,MarchMeta);
+				return LocalDistance;
+			}
+
+
+			
+			float GetDistance_TestSphere(float4 SphereWorld,float3 RayPosWorld,out float3 Colour)
 			{
 				//	test sphere in world space
 				float3 RayPosLocal = RayPosWorld - SphereWorld.xyz;
-				Distance = sdSphere(RayPosLocal,SphereWorld.w);
-
-				if ( Distance > SphereWorld.w )
-					return;
-					
+				float Distance = sdSphere(RayPosLocal,SphereWorld.w);
+	
 				//	calc norm of the point we hit
 				//	note: this is NOT the right normal. we should do 4x samples to get proper normal
 				float3 Normal = normalize(RayPosLocal);
@@ -135,28 +275,28 @@ Shader "Panopoly/PointCloudRayMarch"
 				Normal /= 2;
 
 				Colour = Normal;
+				return Distance;
 			}
 
-			bool GetDistance_ToProjection(float3 RayPosWorld,out float Distance,out float3 Colour)
+			float GetDistance_ToProjection(float3 RayPosWorld,out float3 Colour)
 			{
 				float4 NearCloudPosition = GetCameraNearestCloudPosition(RayPosWorld,Colour);
 				if ( NearCloudPosition.w < 0.5 )
 				{
-					Distance = 999;
-					return false;
+					return 999;
 				}
 
-				Distance = distance( RayPosWorld, NearCloudPosition.xyz );
-				return true;
+				return distance( RayPosWorld, NearCloudPosition.xyz );
 			}
 
 
 
-			void GetDistance(float3 RayPosWorld,out float Distance,out float3 Colour)
+			float GetDistance(float3 RayPosWorld,out float3 Colour,MarchMeta_t MarchMeta)
 			{
-				GetDistance_ToProjection( RayPosWorld, Distance, Colour );
-				return;
-
+				Colour = float3(0,0,1);
+				return GetDistance_SdfCloud(RayPosWorld,Colour,MarchMeta);
+				//return GetDistance_ToProjection( RayPosWorld, Colour );
+/*
 				float4 DebugSphere = float4(SphereX,SphereY,SphereZ,SphereRad);
 				float SphereDistance;
 				float3 SphereColour;
@@ -175,7 +315,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					//Distance = SphereDistance;
 					//Colour = SphereColour;
 				}
-
+*/
 			}
 
 
@@ -193,7 +333,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				bool Inside = ENABLE_INSIDE_DETECTION && dot(input.WorldNormal,RayDirection) <= 0;
 
 				//	hardcoded to unroll loop									
-				#define MARCH_STEPS 100
+				#define MARCH_STEPS 50	//	gr: temp for quick compiling
 
 				//	ray needs to start at the camera if we're INSIDE the shape, otherwise frag pos is the backface
 				//	gr: if we're inside, we could force the far distance to be the ray pos, then we won't draw
@@ -208,17 +348,18 @@ Shader "Panopoly/PointCloudRayMarch"
 				float3 BestColour = float3(0,1,1);
 
 				float StepHeat = 0;
+				MarchMeta_t MarchMeta;
+				MarchMeta.BlockDepth = input.BlockDepth;
 
 				float RayStep = distance(RayMarchEnd,RayMarchStart) / float(MARCH_STEPS);
 				float RayDistance = 0;	//	this is ray time, but now in worldspace units
 				//[unroll(MARCH_STEPS)]
-				for ( int i=0;	i<50;	i++)//MARCH_STEPS;	i++ )
+				for ( int i=0;	i<MARCH_STEPS;	i++ )
 				{
 					float3 RayPosition = RayMarchStart + (RayMarchDir*RayDistance);
 
-					float HitDistance = 999;
 					float3 HitColour;
-					GetDistance(RayPosition,HitDistance,HitColour);
+					float HitDistance = GetDistance(RayPosition,HitColour,MarchMeta);
 
 					//	normally step heat += 1 for every near miss
 					//	but we're always stepping, so increase by inverse distance, so only count heat
