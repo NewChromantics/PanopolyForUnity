@@ -189,7 +189,14 @@ Shader "Panopoly/PointCloudRayMarch"
 				return float2(u,v);
             }
 
-			float2 PointCloudMapXyzNormToUv(float3 xyz,int g_BlockDepth,out float3 InternalXyz)
+			struct uvpair_t
+			{
+				float2 a;
+				float2 b;
+				float Blend;
+			};
+
+			uvpair_t PointCloudMapXyzNormToUv(float3 xyz,int g_BlockDepth,out float3 InternalXyz)
             {
 				float3 Blockwhd = float3(BLOCKWIDTH,BLOCKHEIGHT,BLOCKDEPTH);
 
@@ -197,23 +204,37 @@ Shader "Panopoly/PointCloudRayMarch"
 				//	0..1 needs converting, because Y & Z don't neccessarly align to pixels
 				float x = xyz.x * float(BLOCKWIDTH);
 				//	z needs to be on the correct plane. maybe here we should blend between 2 planes
-				int z = xyz.z * float(BLOCKDEPTH);
+				float zf = xyz.z * float(BLOCKDEPTH);
+				float za = floor(zf);
+				float zb = za+1.0;
+				float zLerp = Range( za, zb, zf );
 				float y = xyz.y * float(BLOCKHEIGHT);
-				float2 SampleUv = PointCloudMapXyzToUv( float3(x,y,z), g_BlockDepth );
+
+				float2 SampleUva = PointCloudMapXyzToUv( float3(x,y,za), g_BlockDepth );
+				float2 SampleUvb = PointCloudMapXyzToUv( float3(x,y,zb), g_BlockDepth );
 				
 				//	convert to uv and back, as we know that uv->xyz is correct
-				int3 InternalXyz_i = PointCloudMapUvToXyz(SampleUv, g_BlockDepth);
+				int3 InternalXyz_i = PointCloudMapUvToXyz(SampleUva, g_BlockDepth);
 				InternalXyz = InternalXyz_i / Blockwhd;
 				//InternalXyz = floor(xyz*Blockwhd)/Blockwhd;
 
-				return SampleUv;
+				uvpair_t SamplePair;
+				SamplePair.a = SampleUva;
+				SamplePair.b = SampleUvb;
+				SamplePair.Blend = zLerp;
+
+				return SamplePair;
             }
 			
 			float GetDistance_SdfCloudLocal(float3 RayPosLocal,out float3 Colour,MarchMeta_t MarchMeta)
 			{
 				float3 InternalXyz;
-				float2 SampleUv = PointCloudMapXyzNormToUv(RayPosLocal,MarchMeta.BlockDepth,InternalXyz);
-				float4 Sample = tex2D( CloudPositions, SampleUv );
+				uvpair_t SampleUvs = PointCloudMapXyzNormToUv(RayPosLocal,MarchMeta.BlockDepth,InternalXyz);
+
+				float4 Samplea = tex2D( CloudPositions, SampleUvs.a );
+				float4 Sampleb = tex2D( CloudPositions, SampleUvs.b );
+				float4 Sample = lerp(Samplea,Sampleb,SampleUvs.Blend);
+
 				//	w is distance
 				Colour = Sample.xyz;
 				//Colour = Sample.www;
