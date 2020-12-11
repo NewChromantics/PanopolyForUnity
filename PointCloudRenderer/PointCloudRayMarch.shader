@@ -113,8 +113,8 @@ Shader "Panopoly/PointCloudRayMarch"
 
 			//  gr: make sure these are integers!
 			#define CALC_BLOCKDEPTH int( floor( sqrt(MAP_TEXTURE_HEIGHT) ) )
-            #define BLOCKWIDTH  90//(MAP_TEXTURE_WIDTH)
-            #define BLOCKDEPTH  90//(g_BlockDepth) //  gr: ditch the extra param and calculate it as sqrt instead
+            #define BLOCKWIDTH  (MAP_TEXTURE_WIDTH)
+            #define BLOCKDEPTH  (g_BlockDepth) //  gr: ditch the extra param and calculate it as sqrt instead
             #define BLOCKHEIGHT (int(MAP_TEXTURE_HEIGHT / float(BLOCKDEPTH)))
 
 			//	distance written in the sdf writer, so we can(?) assume there's this much gap to next
@@ -243,7 +243,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				//Colour = InternalXyz;
 				//Colour = NormalToRedGreen(SampleUv.y);
 				//Colour = NormalToRedGreen(InternalXyz.yyy);
-
+				int g_BlockDepth = MarchMeta.BlockDepth;
 				float3 Blockwhd = float3(BLOCKWIDTH,BLOCKHEIGHT,BLOCKDEPTH);
 				float3 WorkingInternalXyz = floor(RayPosLocal*Blockwhd)/Blockwhd;
 
@@ -354,7 +354,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				bool Inside = ENABLE_INSIDE_DETECTION && dot(input.WorldNormal,RayDirection) <= 0;
 
 				//	hardcoded to unroll loop									
-				#define MARCH_STEPS 50	//	gr: temp for quick compiling
+				#define MARCH_STEPS 20	//	gr: temp for quick compiling
 
 				//	ray needs to start at the camera if we're INSIDE the shape, otherwise frag pos is the backface
 				//	gr: if we're inside, we could force the far distance to be the ray pos, then we won't draw
@@ -391,7 +391,8 @@ Shader "Panopoly/PointCloudRayMarch"
 					//	step ray forward
 					//	allow smaller steps
 					//	gr: for our heightmap stepping, if this is <step, we may want to step backwards
-					RayDistance += min( HitDistance, RayStep );
+					//RayDistance += min( HitDistance, RayStep );
+					RayDistance += HitDistance;
 
 					//	gr; move t along by distance, normally, but we need fixed step for this
 					//	worse than current best
