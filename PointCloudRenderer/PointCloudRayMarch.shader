@@ -16,7 +16,8 @@ Shader "Panopoly/PointCloudRayMarch"
 		[Toggle]EnableInsideDetection("EnableInsideDetection",Range(0,1))=1
 		MaxHitDistance("MaxHitDistance",Range(0.001,0.2) ) = 0.001
 		MarchNearDistance("MarchNearDistance",Range(-1,10) ) = 0
-		MarchFarDistance("MarchFarDistance",Range(-1,10) ) = 5
+		//MarchFarDistance("MarchFarDistance",Range(-1,10) ) = 5
+		MarchStepBackwards("MarchStepBackwards",Range(-0.4,0.4))=0
 
 		SphereX("SphereX",Range(-2,2)) = 0
 		SphereY("SphereY",Range(-2,2)) = 0
@@ -34,15 +35,7 @@ Shader "Panopoly/PointCloudRayMarch"
 		[Toggle]FlipColourSample("FlipColourSample",Range(0,1)) = 1
 		[Toggle]FlipPositionSample("FlipPositionSample",Range(0,1)) = 1
 
-		//[Header("Relative to MaxHitDistance, what do we count towards ambient occulusion")]
-		AoMaxDistance("AoMaxDistance",Range(0,1) ) = 0.1
-		[Toggle]ApplyAmbientOcclusion("ApplyAmbientOcclusion", Range(0,1))=0
-		[Toggle]DebugAo("DebugAo", Range(0,1)) = 0
-		StepHeatMin("StepHeatMin",Range(0,0.5)) = 0
-		StepHeatMax("StepHeatMax",Range(0,0.5)) = 1
-		//[Header("Colour multiply")]
-		AmbientOcclusionMultMin("AmbientOcclusionMultMin",Range(0,1)) = 0
-		AmbientOcclusionMultMax("AmbientOcclusionMultMax",Range(0,1)) = 1
+		[Toggle]DebugHeat("DebugHeat", Range(0,1)) = 0
     }
     SubShader
     {
@@ -89,25 +82,32 @@ Shader "Panopoly/PointCloudRayMarch"
 			float SphereZ;
 			float SphereRad;
 
+
+
 			float MaxHitDistance;
 #define MinHitDistance	(MaxHitDistance*0.5f)
 			float EnableInsideDetection;
 			#define ENABLE_INSIDE_DETECTION	(EnableInsideDetection>0.5f)
 #define ENABLE_EARLY_Z_BREAK	true
 			float MarchNearDistance;
-			float MarchFarDistance;
-
-			float DebugAo;
-			#define DEBUG_AO_COLOUR	(DebugAo>0.5f)
-			float AoMaxDistance;
-			float StepHeatMin;
-			float StepHeatMax;
-			float ApplyAmbientOcclusion;	
-			#define APPLY_AMBIENT_OCCLUSION	(ApplyAmbientOcclusion>0.5f)
-			float AmbientOcclusionMultMin;
-			float AmbientOcclusionMultMax;
+			//float MarchFarDistance;
+			float MarchStepBackwards;
 
 
+
+
+			float DebugHeat;
+			#define DEBUG_STEP_HEAT	(DebugHeat>0.5f)
+
+
+
+			float CloudPositionsAreSdf;
+			#define CLOUD_POSITIONS_SDF	(CloudPositionsAreSdf>0.5f)
+
+
+
+
+			//	SDF map
 			#define MAP_TEXTURE_WIDTH    (CloudPositions_TexelSize.z)
             #define MAP_TEXTURE_HEIGHT   (CloudPositions_TexelSize.w)
 
@@ -299,24 +299,57 @@ Shader "Panopoly/PointCloudRayMarch"
 				return Distance;
 			}
 
+			float3 GetCameraDirection()
+			{
+				float4 CameraCenterWorld = mul(WorldToLocalTransform,float4(0,0,0,1));
+				float4 CameraForwardWorld = mul(WorldToLocalTransform,float4(0,0,1,1));
+				float3 CameraCenter = CameraCenterWorld.xyz / CameraCenterWorld.www;
+				float3 CameraForward = CameraForwardWorld.xyz / CameraForwardWorld.www;
+				return normalize(CameraForward - CameraCenter);
+			}
+
+
 			float GetDistance_ToProjection(float3 RayPosWorld,out float3 Colour)
 			{
 				float4 NearCloudPosition = GetCameraNearestCloudPosition(RayPosWorld,Colour);
+
+				//	gr: this happens when point is outside frustum, we should
+				//		be able to work out the distance to the frustum...
 				if ( NearCloudPosition.w < 0.5 )
 				{
-					return 999;
+					//	hit invalid point
+					Colour = float3(0,1,0);
+					//return 0.2;
 				}
 
-				return distance( RayPosWorld, NearCloudPosition.xyz );
+				float3 Delta = NearCloudPosition.xyz - RayPosWorld;
+				float Distance = length( Delta );
+
+				float3 CameraDirection = GetCameraDirection();
+				float DirectionDot = dot( normalize(Delta),CameraDirection);
+
+				//	check if we go behind this point
+				//	gr: should we be stepping backwards? maybe this is the solution to the old reverse-step
+				if ( DirectionDot < 0 )
+					Distance += MarchStepBackwards * DirectionDot;
+
+
+				return Distance;
 			}
 
 
 
 			float GetDistance(float3 RayPosWorld,out float3 Colour,MarchMeta_t MarchMeta)
 			{
-				Colour = float3(0,0,1);
-				return GetDistance_SdfCloud(RayPosWorld,Colour,MarchMeta);
-				//return GetDistance_ToProjection( RayPosWorld, Colour );
+				if ( CLOUD_POSITIONS_SDF )
+				{
+					Colour = float3(0,0,1);
+					return GetDistance_SdfCloud(RayPosWorld,Colour,MarchMeta);
+				}
+				else
+				{
+					return GetDistance_ToProjection( RayPosWorld, Colour );
+				}
 /*
 				float4 DebugSphere = float4(SphereX,SphereY,SphereZ,SphereRad);
 				float SphereDistance;
@@ -363,7 +396,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				float3 RayMarchDir = -RayDirection;//normalize(input.WorldPosition - RayEyeStart);
 
 				float3 RayMarchStart = RayEyeStart + (RayMarchDir * MarchNearDistance);
-				float3 RayMarchEnd = RayEyeStart + (RayMarchDir * MarchFarDistance);
+				//float3 RayMarchEnd = RayEyeStart + (RayMarchDir * MarchFarDistance);
 
 				float BestDistance = 99;
 				float3 BestColour = float3(0,1,1);
@@ -372,7 +405,6 @@ Shader "Panopoly/PointCloudRayMarch"
 				MarchMeta_t MarchMeta;
 				MarchMeta.BlockDepth = input.BlockDepth;
 
-				float RayStep = distance(RayMarchEnd,RayMarchStart) / float(MARCH_STEPS);
 				float RayDistance = 0;	//	this is ray time, but now in worldspace units
 				//[unroll(MARCH_STEPS)]
 				for ( int i=0;	i<MARCH_STEPS;	i++ )
@@ -382,16 +414,11 @@ Shader "Panopoly/PointCloudRayMarch"
 					float3 HitColour;
 					float HitDistance = GetDistance(RayPosition,HitColour,MarchMeta);
 
-					//	normally step heat += 1 for every near miss
-					//	but we're always stepping, so increase by inverse distance, so only count heat
-					//	where we werent miles from something
-					float HeatDistance = min(HitDistance,AoMaxDistance);
-					StepHeat += 1 - (HeatDistance/AoMaxDistance);
+					StepHeat += 1;
 
 					//	step ray forward
 					//	allow smaller steps
 					//	gr: for our heightmap stepping, if this is <step, we may want to step backwards
-					//RayDistance += min( HitDistance, RayStep );
 					RayDistance += HitDistance;
 
 					//	gr; move t along by distance, normally, but we need fixed step for this
@@ -414,18 +441,12 @@ Shader "Panopoly/PointCloudRayMarch"
 					discard;
 
 
-				if ( DEBUG_AO_COLOUR || APPLY_AMBIENT_OCCLUSION )
+				if ( DEBUG_STEP_HEAT )
 				{
 					//	make stepheat relative to total so these settings are step-agnostic
 					StepHeat /= float(MARCH_STEPS);
-					//	bigger number = more heat = red rather than green
-					StepHeat = 1.0 - Range(StepHeatMin,StepHeatMax,StepHeat);
 
-					if ( DEBUG_AO_COLOUR )
-						return float4(NormalToRedGreen(StepHeat),1);
-
-					float Mult = lerp(AmbientOcclusionMultMin,AmbientOcclusionMultMax,StepHeat);
-					BestColour *= Mult;
+					return float4(NormalToRedGreen(1-StepHeat),1);
 				}
 		
                 return float4(BestColour,1.0);

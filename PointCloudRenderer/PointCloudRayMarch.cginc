@@ -105,17 +105,19 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	float3 RayPosCamera3 = RayPosCamera4.xyz / RayPosCamera4.www;
 
 	//	camera image space to uv
-	//	gr: do I div or mult by z
 	//	gr: by checking distance against a Z, we can see this needs to be /z
 	float2 RayPosCamera2 = RayPosCamera3.xy / RayPosCamera3.zz;
 	float2 RayPosUv = Range2( CameraToLocalViewportMin, CameraToLocalViewportMax, RayPosCamera2 );
 
 	//	out of view frustum (either uv should be out)
 	//	or behind camera
+	float Valid = 1.0;
 	if ( !IsInside01(RayPosUv.x) || !IsInside01(RayPosUv.y) || RayPosCamera3.z < 0 )
 	{
-		Colour = float4(1,0,1,1);
-		return float4(0,0,0,0);
+		//Colour = float4(1,0,1,1);
+		//return float4(0,0,0,0);
+		Valid = 0;
+		RayPosUv = clamp(RayPosUv, 0, 1);
 	}
 
 	//	gr: not sure why I need to flip, I think normally we render bottom to top, but here we're in camera space...
@@ -129,7 +131,7 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	float2 RayHitUv = RayPosUv;
 
 
-	#define SampleRadius	3
+	#define SampleRadius	1
 	{
 		float RayHitCloudDistance=999;
 		for ( int y=-SampleRadius;	y<=SampleRadius;	y++ )
@@ -180,5 +182,5 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	}
 */
 #endif
-	return float4(RayHitCloudPos);
+	return float4(RayHitCloudPos.xyz,Valid);
 }
