@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -64,7 +64,7 @@ namespace Panopoly
 			PendingFrames.Add(Frame);
 		}
 
-		public void DecodeToTime(int Millseconds)
+		public void DecodeToTime(int Millseconds,bool KeyframesOnly)
 		{
 			//	todo: if in past, rewind to last keyframe <= Milliseconds and re-push pending frames
 
@@ -74,13 +74,29 @@ namespace Panopoly
 				var Frame = PendingFrames[0];
 				if (Frame.Meta.Time > Millseconds)
 					break;
+
 				if (Decoder != null)
 				{
-					if (VerboseDebug)
+					bool Decode = true;
+					try
 					{
-						Debug.Log("Stream " + Name + " decoding data x" + Frame.Data.Length + " Framenumber #" + FrameCounter);
+						var NaluOffset = PopX.H264.GetNaluHeaderSize(Frame.Data);
+						var NaluType = PopX.H264.GetNaluType(Frame.Data[NaluOffset]);
+						if (NaluType == PopX.H264.NaluType.PFrame)
+						{
+							Decode = !KeyframesOnly;
+						}
 					}
-					Decoder.PushFrameData(Frame.Data, FrameCounter);
+					catch(System.Exception e)
+					{
+						//	failed to get nalu
+					}
+
+					if (Decode)
+					{
+						Debug("Stream " + Name + " decoding data x" + Frame.Data.Length + " Framenumber #" + FrameCounter + " " + (Decode ? "" : "Skipped(Not keyframe)"));
+						Decoder.PushFrameData(Frame.Data, FrameCounter);
+					}
 					FrameMetas[FrameCounter] = Frame.Meta;
 					FrameCounter++;
 				}
@@ -162,6 +178,7 @@ public class PanopolyViewer : MonoBehaviour
 	public class UnityEvent_StreamBytes : UnityEngine.Events.UnityEvent<string,byte[]> { }
 
 	public bool VerboseDebug = false;
+	public bool DecodeKeyframeOnly = false;
 
 	[Range(0, 30)]
 	public float TimeSecs = 0;
@@ -285,7 +302,7 @@ public class PanopolyViewer : MonoBehaviour
 		{
 			var StreamName = NameAndStream.Key;
 			var Stream = NameAndStream.Value;
-			Stream.DecodeToTime(DecodeTime);
+			Stream.DecodeToTime(DecodeTime,DecodeKeyframeOnly);
 		}
 	}
 
