@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -28,7 +28,7 @@ namespace Panopoly
 
 	public class TStream
 	{
-		public bool					VerboseDebug { get { return PanopolyViewer.StreamVerboseDebug; } }
+		System.Action<string>		Debug;
 		public string				Name;
 		PopH264.Decoder				Decoder;
 		public PopH264.DecoderParams DecoderParams;
@@ -40,8 +40,9 @@ namespace Panopoly
 		Dictionary<int, PopCap.TFrameMeta> FrameMetas = new Dictionary<int, TFrameMeta>();  //	hack: we're ditching old data, but need to fetch meta back again later
 		int FrameCounter = 0;		//	gr: PopH264, osx at least, isn't returning correct frame numbers
 
-		public TStream(string Name,PopH264.DecoderParams DecoderParams)
+		public TStream(string Name,PopH264.DecoderParams DecoderParams,System.Action<string> Debug)
 		{
+			this.Debug = Debug;
 			this.Name = Name;
 			this.DecoderParams = DecoderParams;
 			//	gr: continue even if we fail to create a decoder to aid flow testing
@@ -51,7 +52,7 @@ namespace Panopoly
 			}
 			catch(System.Exception e)
 			{
-				Debug.LogError("Failed to allocated PopH264 decoder: " + e.Message);
+				Debug("Failed to allocated PopH264 decoder: " + e.Message);
 			}
 		}
 
@@ -104,8 +105,7 @@ namespace Panopoly
 				{
 					if (NextDecodedFrame.Value.FrameTime > Milliseconds)
 					{
-						if (VerboseDebug)
-							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.FrameTime + ">"+Milliseconds);
+						Debug("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.FrameTime + ">"+Milliseconds);
 						return NoFrame();
 					}
 
@@ -130,27 +130,25 @@ namespace Panopoly
 				var NewFrameTime = Decoder.GetNextFrame(ref NewFrame.FramePlaneTextures, ref NewFrame.FramePlaneFormats);
 				if (!NewFrameTime.HasValue)
 				{
-					if (VerboseDebug)
-						Debug.Log("Stream " + Name + " no frame");
-
+					Debug("Stream " + Name + " no frame");
 					return PrevFrame;
 				}
-				if (VerboseDebug)
-					Debug.Log("Stream " + Name + " decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
+
+				Debug("Stream " + Name + " decoded frame #" + NewFrameTime.Value + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrameTime.Value))
 				{
 					NewFrame.Meta = FrameMetas[NewFrameTime.Value];
 				}
 				else
 				{
-					Debug.LogError("Missing meta for new frame " + NewFrameTime.Value);
+					Debug("Missing meta for new frame " + NewFrameTime.Value);
 				}
 
 				//	set this as next frame and loop around
 				NextDecodedFrame = NewFrame;
 			}
 
-			Debug.LogError("Aborting after X tries of decoding frame in stream "+ Name);
+			Debug("Aborting after X tries of decoding frame in stream "+ Name);
 			return NoFrame();
 		}
 	};
@@ -198,8 +196,16 @@ public class PanopolyViewer : MonoBehaviour
 
 	TStream GetStream(string Name)
 	{
+		System.Action<string> DebugLog = (string Log) =>
+		{
+			if ( VerboseDebug )
+			{
+				Debug.Log(Name + "; " + Log);
+			}
+		};
+
 		if (!Streams.ContainsKey(Name))
-			Streams.Add(Name, new TStream(Name,DecoderParams));
+			Streams.Add(Name, new TStream(Name,DecoderParams, DebugLog));
 		return Streams[Name];
 	}
 	
