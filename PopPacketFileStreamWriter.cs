@@ -23,7 +23,7 @@ public class PopPacketFileStreamWriter : MonoBehaviour
 	void Write(byte[] Data)
 	{
 		//	needed as these funcs can be called whilst disabled
-		if (!this.enabled)
+		if (!this.isActiveAndEnabled)
 			return;
 
 		if ( File == null )
