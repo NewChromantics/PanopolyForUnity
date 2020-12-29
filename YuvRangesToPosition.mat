@@ -50,6 +50,7 @@ Material:
     - Encoded_DepthMinMetres: 0
     - Encoded_DepthRanges: 1
     - Encoded_LumaPingPong: 0
+    - Flip: 0
     - PlaneCount: 2
     - ValidMinMetres: 0.01
     - _Angle: 0

@@ -6,6 +6,7 @@
 		Plane2("Plane2", 2D) = "white" {}
 		Plane3("Plane3", 2D) = "white" {}
 		[IntRange]PlaneCount("PlaneCount",Range(0,3)) = 3
+		[Toggle]Flip("Flip",Range(0,1)) =0
 	}
 	SubShader
 	{
@@ -42,11 +43,16 @@
 			#define ChromaVPlane	Plane3
 			#define ChromaUVPlane	Plane2
 
+			float Flip;
+			#define FLIP	(Flip>0.5f)
+
 			v2f vert (appdata v)
 			{
 				v2f o;
 				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.uv = v.uv;//TRANSFORM_TEX(v.uv, LumaPlane);
+				o.uv = v.uv;
+				if ( FLIP )
+					o.uv.y = 1.0 - o.uv.y;
 				return o;
 			}
 

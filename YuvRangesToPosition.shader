@@ -14,6 +14,7 @@
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
+		[Toggle]Flip("Flip",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
 	}
 	
@@ -43,7 +44,8 @@
 					float4 vertex : SV_POSITION;
 				};
 
-
+				float Flip;
+#define FLIP	(Flip>0.5f)
 				float _Angle;
 				sampler2D LumaPlane;
 				float4 LumaPlane_ST;
@@ -80,6 +82,9 @@
 	                float2 uv = TRANSFORM_TEX(v.uv, LumaPlane) - pivot;
 	                o.uv = mul(rot, uv);
 	                o.uv += pivot;
+
+					if ( FLIP )
+						o.uv.y = 1.0 - o.uv.y;
 					
 					//o.uv = TRANSFORM_TEX(v.uv, LumaPlane);
 					return o;
