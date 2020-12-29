@@ -210,6 +210,8 @@ public class PanopolyViewer : MonoBehaviour
 
 	PopCap.TFrameMeta? PendingMeta = null;  //	meta preceding next data
 
+	public PopPacketFileStreamWriter RelayToWriter;
+
 
 	TStream GetStream(string Name)
 	{
@@ -237,6 +239,9 @@ public class PanopolyViewer : MonoBehaviour
 
 	public void OnMeta(PopCap.TFrameMeta Meta)
 	{
+		if (RelayToWriter != null)
+			RelayToWriter.WriteString(JsonUtility.ToJson(Meta));
+
 		if (!FirstTimeMs.HasValue)
 			FirstTimeMs = Meta.Time;
 
@@ -251,6 +256,9 @@ public class PanopolyViewer : MonoBehaviour
 
 	public void OnData(byte[] Data)
 	{
+		if (RelayToWriter != null)
+			RelayToWriter.WriteBinary(Data);
+
 		//	todo: this function should allow multiple parts? or caller should assemble multiple packets?
 		if (!PendingMeta.HasValue)
 			throw new System.Exception("Recieved data without preceding meta");
