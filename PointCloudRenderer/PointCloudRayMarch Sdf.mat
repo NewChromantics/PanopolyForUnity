@@ -45,6 +45,7 @@ Material:
     - DebugCameraTestPlane: 0
     - DebugColourDistanceMax: 0.8
     - DebugColourDistanceMin: 0.5
+    - DebugHeat: 0
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
     - EnableCameraDebug: 1
@@ -55,6 +56,7 @@ Material:
     - LocalRayNearDepth: 0
     - MarchFarDistance: 5.55
     - MarchNearDistance: 0
+    - MarchStepBackwards: 0
     - MaxHitDistance: 0.004
     - MaxMarchDistance: 0.4
     - PointSize: 0.01
@@ -65,5 +67,5 @@ Material:
     - StepHeatMax: 0.404
     - StepHeatMin: 0
     m_Colors:
-    - WorldBoundsMax: {r: 0.2192264, g: -0.3340247, b: 0.5178119, a: 1}
-    - WorldBoundsMin: {r: 0.08031946, g: -0.5, b: 0.4149566, a: 1}
+    - WorldBoundsMax: {r: 0.5, g: -0.25, b: 0.75, a: 1}
+    - WorldBoundsMin: {r: -0.5, g: -0.55, b: 0.25, a: 1}
