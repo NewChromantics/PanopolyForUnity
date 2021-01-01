@@ -44,7 +44,7 @@ Material:
     - DebugCameraColourUv: 0
     - DebugCameraTestPlane: 0
     - DebugColourDistanceMax: 0.8
-    - DebugColourDistanceMin: 0.5
+    - DebugColourDistanceMin: 0.68
     - DebugHeat: 0
     - Debug_InvalidPositions: 0
     - DrawInvalidPositions: 0
@@ -55,11 +55,11 @@ Material:
     - LocalRayFarDepth: 1.414
     - LocalRayNearDepth: 0
     - MarchFarDistance: 5.55
-    - MarchNearDistance: 0
+    - MarchNearDistance: -0
     - MarchStepBackwards: 0
-    - MaxHitDistance: 0.004
+    - MaxHitDistance: 0.001
     - MaxMarchDistance: 0.4
-    - PointSize: 0.01
+    - PointSize: 0.0047
     - SphereRad: 0.001
     - SphereX: 0
     - SphereY: 0
