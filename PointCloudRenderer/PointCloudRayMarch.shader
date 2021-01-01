@@ -18,7 +18,9 @@ Shader "Panopoly/PointCloudRayMarch"
 		MarchNearDistance("MarchNearDistance",Range(-1,10) ) = 0
 		//MarchFarDistance("MarchFarDistance",Range(-1,10) ) = 5
 		MarchStepBackwards("MarchStepBackwards",Range(-0.4,0.4))=0
-
+		NoDataStepDistance("NoDataStepDistance",Range(0,1)) = 0.1
+		MaxMarchDistance("MaxMarchDistance",Range(0.001,1) ) = 1
+		
 		SphereX("SphereX",Range(-2,2)) = 0
 		SphereY("SphereY",Range(-2,2)) = 0
 		SphereZ("SphereZ",Range(-2,2)) = 0
@@ -52,6 +54,7 @@ Shader "Panopoly/PointCloudRayMarch"
 			//#define ENABLE_CAMERA_DEBUG
 
             #include "UnityCG.cginc"
+#define CLOUD_RAYMARCH_SAMPLE_RADIUS    0
 			#include "PointCloudRayMarch.cginc"
 
             //  https://github.com/SoylentGraham/PopUnityCommon/blob/master/PopCommon.cginc
@@ -92,9 +95,11 @@ Shader "Panopoly/PointCloudRayMarch"
 			float MarchNearDistance;
 			//float MarchFarDistance;
 			float MarchStepBackwards;
+			float NoDataStepDistance;
+			float MaxMarchDistance;
 
-
-
+#define INVALID_NEW_DIST    99
+#define SAMPLE_INVALID_DIST    INVALID_NEW_DIST
 
 			float DebugHeat;
 			#define DEBUG_STEP_HEAT	(DebugHeat>0.5f)
@@ -233,7 +238,20 @@ Shader "Panopoly/PointCloudRayMarch"
 
 				float4 Samplea = tex2D( CloudPositions, SampleUvs.a );
 				float4 Sampleb = tex2D( CloudPositions, SampleUvs.b );
-				float4 Sample = lerp(Samplea,Sampleb,SampleUvs.Blend);
+
+				float Blend = SampleUvs.Blend;
+				int ValidBits = 0;
+				if ( Samplea.w < SAMPLE_INVALID_DIST )
+					ValidBits += 1;
+				if ( Sampleb.w < SAMPLE_INVALID_DIST )
+					ValidBits += 2;
+				if ( ValidBits == 0 )
+					return SAMPLE_INVALID_DIST;
+				if ( ValidBits == 1 )
+					Blend = 0;
+				if ( ValidBits == 2 )
+					Blend = 1;
+				float4 Sample = lerp(Samplea,Sampleb,Blend);
 
 				//	w is distance
 				Colour = Sample.xyz;
@@ -272,7 +290,8 @@ Shader "Panopoly/PointCloudRayMarch"
 					//	todo: if outside, return distance to bounds edge
 					Colour = float3(0,0,1);
 					//	gr: intead of stepping inside, it should read distance at the edge-sample
-					return DistanceToBounds+0.01;	//	step inside
+					//	gr: in case we're stepping backwards, need to make sure that step wont push us outside
+					return DistanceToBounds+MarchStepBackwards+0.001;	//	step inside
 				}
 
 				//return DistanceToBounds;
@@ -398,7 +417,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				float3 RayMarchStart = RayEyeStart + (RayMarchDir * MarchNearDistance);
 				//float3 RayMarchEnd = RayEyeStart + (RayMarchDir * MarchFarDistance);
 
-				float BestDistance = 99;
+				float BestDistance = 999;
 				float3 BestColour = float3(0,1,1);
 
 				float StepHeat = 0;
@@ -416,30 +435,58 @@ Shader "Panopoly/PointCloudRayMarch"
 
 					StepHeat += 1;
 
+					//	very far, as in, bad/no data in the sdf, do a "standard step"
+					//	gr: this is quite rare, seems to happen at certain angles...
+					if ( HitDistance >= SAMPLE_INVALID_DIST )
+					{
+						//RayDistance += 0.1;
+						RayDistance += NoDataStepDistance;// + MinHitDistance;
+						//return float4(0,0,1,1);
+						continue;
+					}
+
 					//	step ray forward
 					//	allow smaller steps
 					//	gr: for our heightmap stepping, if this is <step, we may want to step backwards
-					RayDistance += HitDistance;
+					RayDistance += min( MaxMarchDistance, HitDistance );
+					if ( HitDistance > MinHitDistance )
+						if ( HitDistance > MarchStepBackwards )
+							RayDistance -= MarchStepBackwards;
 
 					//	gr; move t along by distance, normally, but we need fixed step for this
 					//	worse than current best
 					if ( HitDistance > BestDistance )
 						continue;
 
-					//	gr: we're gettting z order issues, bail early if this is good enough
-					if ( ENABLE_EARLY_Z_BREAK && BestDistance <= MinHitDistance )
-						break;
-
 					BestDistance = HitDistance;
 					BestColour = HitColour;
+
+					//	gr: we're gettting z order issues, bail early if this is good enough
+					if ( BestDistance <= MinHitDistance)
+						if ( ENABLE_EARLY_Z_BREAK )
+							break;
+					
 				}
 
 				//	max distance can only be the (far-near) distance now
 				//if ( BestDistance > MarchFarDistance )
 				//	didn't get close enough to anything
 				if ( BestDistance > MaxHitDistance )
+				{
+					//	debug misses
+					//StepHeat += 10;
 					discard;
+				}
 
+				//	get projection colour
+				{
+					float x;
+					float3 RayPosition = RayMarchStart + (RayMarchDir*RayDistance);
+					float3 ProjectedColour;
+					float4 HitPosition = GetCameraNearestCloudPosition( RayPosition, ProjectedColour );
+					if ( HitPosition.w > 0 )
+						BestColour = ProjectedColour;
+				}
 
 				if ( DEBUG_STEP_HEAT )
 				{
