@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PointCloudRayMarch : MonoBehaviour
 {
-	public Material RayMarchMaterial;
+	public List<Material> RayMarchMaterials;
 
 	public void OnFrame(PopCap.TFrameMeta ColourMeta, Texture ColourTexture, PopCap.TFrameMeta DepthMeta, Texture PositionTexture)
 	{
@@ -26,10 +26,16 @@ public class PointCloudRayMarch : MonoBehaviour
 			Debug.LogWarning("PointCloudRayMarch frame missing .Camera.LocalToWorld");
 			return;
 		}
-		RayMarchMaterial.SetVector("CameraToLocalViewportMin", DepthMeta.Camera.GetCameraSpaceViewportMin());
-		RayMarchMaterial.SetVector("CameraToLocalViewportMax", DepthMeta.Camera.GetCameraSpaceViewportMax());
-		RayMarchMaterial.SetMatrix("CameraToLocalTransform", DepthMeta.Camera.GetCameraToLocal());
-		RayMarchMaterial.SetMatrix("LocalToCameraTransform", DepthMeta.Camera.GetLocalToCamera());
-		RayMarchMaterial.SetMatrix("WorldToLocalTransform", DepthMeta.Camera.GetWorldToLocal());
+
+		foreach (var RayMarchMaterial in RayMarchMaterials)
+		{
+			if (RayMarchMaterial == null)
+				continue;
+			RayMarchMaterial.SetVector("CameraToLocalViewportMin", DepthMeta.Camera.GetCameraSpaceViewportMin());
+			RayMarchMaterial.SetVector("CameraToLocalViewportMax", DepthMeta.Camera.GetCameraSpaceViewportMax());
+			RayMarchMaterial.SetMatrix("CameraToLocalTransform", DepthMeta.Camera.GetCameraToLocal());
+			RayMarchMaterial.SetMatrix("LocalToCameraTransform", DepthMeta.Camera.GetLocalToCamera());
+			RayMarchMaterial.SetMatrix("WorldToLocalTransform", DepthMeta.Camera.GetWorldToLocal());
+		}
 	}
 }
