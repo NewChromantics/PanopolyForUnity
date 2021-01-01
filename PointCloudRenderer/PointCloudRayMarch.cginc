@@ -130,10 +130,14 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	float4 RayHitCloudPos = float4(0,0,0,0);
 	float2 RayHitUv = RayPosUv;
 
-
-	#define SampleRadius	1
+#if !defined(CLOUD_RAYMARCH_SAMPLE_RADIUS)
+	#define SampleRadius	0
+#else
+	#define SampleRadius CLOUD_RAYMARCH_SAMPLE_RADIUS
+#endif
 	{
 		float RayHitCloudDistance=999;
+
 		for ( int y=-SampleRadius;	y<=SampleRadius;	y++ )
 		{
 			for ( int x=-SampleRadius;	x<=SampleRadius;	x++ )
