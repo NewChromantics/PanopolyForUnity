@@ -12,12 +12,14 @@ public class MakeDumbMesh : MonoBehaviour
 	[Range(2, 2048)]
 	public int PointCountHeight = 480;
 	public int PointCount { get { return PointCountWidth * PointCountHeight; } }
-	public int VertexCount { get { return PointCount * 3; } }
+	public int VertexCount { get { return PointCount * (CreateQuads?4:3); } }
+
+	public bool CreateQuads = false;
 
 	void GenerateMesh()
 	{
 		//	modify existing asset where possible
-		mesh = MakeMesh(PointCountWidth, PointCountHeight, mesh);
+		mesh = MakeMesh(PointCountWidth, PointCountHeight, CreateQuads, mesh);
 		//	try and make the user save it as a file
 #if UNITY_EDITOR
 		mesh = AssetWriter.SaveAsset(mesh);
@@ -50,7 +52,7 @@ public class MakeDumbMesh : MonoBehaviour
 			GenerateMesh();
 	}
 
-	public static void AddTriangle(ref List<Vector3> Positions, ref List<Vector3> Uvs, ref List<int> Indexes, int x,int y, int Width, int Height)
+	public static void AddTriangle(ref List<Vector3> Positions, ref List<Vector3> Uvs, ref List<int> Indexes, int x,int y, int Width, int Height,bool MakeQuad)
 	{
 		//	xy = local triangle uv
 		//	z = triangle index
@@ -60,6 +62,7 @@ public class MakeDumbMesh : MonoBehaviour
 		var pos0 = new Vector3(0, 0, Index);
 		var pos1 = new Vector3(1, 0, Index);
 		var pos2 = new Vector3(0, 1, Index);
+		var pos3 = new Vector3(1, 1, Index);
 		//	these are point-uv's but would need adjusting in the shader to be less blocky, 
 		//	but that would depend on point size so we dont do it here
 		var u = x / (float)Width;
@@ -67,6 +70,7 @@ public class MakeDumbMesh : MonoBehaviour
 		var uv0 = new Vector3(u, v, 0);
 		var uv1 = new Vector3(u, v, 1);
 		var uv2 = new Vector3(u, v, 2);
+		var uv3 = new Vector3(u, v, 3);
 
 		var VertexIndex = Positions.Count;
 
@@ -80,11 +84,27 @@ public class MakeDumbMesh : MonoBehaviour
 		Indexes.Add(VertexIndex + 0);
 		Indexes.Add(VertexIndex + 1);
 		Indexes.Add(VertexIndex + 2);
+
+		if ( MakeQuad )
+		{
+			VertexIndex = Positions.Count;
+			Positions.Add(pos1);
+			Positions.Add(pos3);
+			Positions.Add(pos2);
+			Uvs.Add(uv1);
+			Uvs.Add(uv3);
+			Uvs.Add(uv2);
+
+			Indexes.Add(VertexIndex + 0);
+			Indexes.Add(VertexIndex + 1);
+			Indexes.Add(VertexIndex + 2);
+		}
 	}
 
-	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,Mesh ExistingMesh)
+
+	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,bool CreateQuads,Mesh ExistingMesh)
 	{
-		var Name = "Triangle Mesh " + PointCountWidth + "x" + PointCountHeight;
+		var Name = (CreateQuads?"Quad":"Triangle") + " Mesh " + PointCountWidth + "x" + PointCountHeight;
 		Debug.Log("Generating new mesh " + Name);
 
 		var Positions = new List<Vector3>();
@@ -95,7 +115,7 @@ public class MakeDumbMesh : MonoBehaviour
 		{
 			for (int x = 0; x < PointCountWidth; x++)
 			{
-				AddTriangle(ref Positions, ref Uvs, ref Indexes, x, y, PointCountWidth, PointCountHeight);
+				AddTriangle(ref Positions, ref Uvs, ref Indexes, x, y, PointCountWidth, PointCountHeight, CreateQuads );
 			}
 		}
 
