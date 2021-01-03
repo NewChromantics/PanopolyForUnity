@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -52,7 +52,7 @@ namespace Panopoly
 			}
 			catch(System.Exception e)
 			{
-				Debug("Failed to allocated PopH264 decoder: " + e.Message);
+				UnityEngine.Debug.LogError("Failed to allocate PopH264 decoder: " + e.Message);
 			}
 		}
 
