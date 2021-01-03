@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PointCloudShader
   m_Shader: {fileID: 4800000, guid: d40bdbe7d4ce43146a2ca0c88162e587, type: 3}
-  m_ShaderKeywords: BILLBOARD_ON
+  m_ShaderKeywords: BILLBOARD_ON DEBUG_INVALIDPOSITIONS_ON DRAWINVALIDPOSITIONS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -29,7 +29,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Billboard: 1
-    - Debug_InvalidPositions: 0
-    - DrawInvalidPositions: 0
+    - Debug_InvalidPositions: 1
+    - DrawInvalidPositions: 1
     - PointSize: 0.015
     m_Colors: []
