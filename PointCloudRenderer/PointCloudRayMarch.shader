@@ -291,7 +291,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					Colour = float3(0,0,1);
 					//	gr: intead of stepping inside, it should read distance at the edge-sample
 					//	gr: in case we're stepping backwards, need to make sure that step wont push us outside
-					return DistanceToBounds+MarchStepBackwards+0.001;	//	step inside
+					return DistanceToBounds+0.01;	//	step inside
 				}
 
 				//return DistanceToBounds;
@@ -440,7 +440,7 @@ Shader "Panopoly/PointCloudRayMarch"
 					if ( HitDistance >= SAMPLE_INVALID_DIST )
 					{
 						//RayDistance += 0.1;
-						RayDistance += NoDataStepDistance;// + MinHitDistance;
+						RayDistance += NoDataStepDistance + MinHitDistance;
 						//return float4(0,0,1,1);
 						continue;
 					}
@@ -449,9 +449,6 @@ Shader "Panopoly/PointCloudRayMarch"
 					//	allow smaller steps
 					//	gr: for our heightmap stepping, if this is <step, we may want to step backwards
 					RayDistance += min( MaxMarchDistance, HitDistance );
-					if ( HitDistance > MinHitDistance )
-						if ( HitDistance > MarchStepBackwards )
-							RayDistance -= MarchStepBackwards;
 
 					//	gr; move t along by distance, normally, but we need fixed step for this
 					//	worse than current best
@@ -479,6 +476,7 @@ Shader "Panopoly/PointCloudRayMarch"
 				}
 
 				//	get projection colour
+if ( false )
 				{
 					float x;
 					float3 RayPosition = RayMarchStart + (RayMarchDir*RayDistance);

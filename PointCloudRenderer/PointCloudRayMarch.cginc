@@ -1,7 +1,10 @@
+#if !defined(CLOUD_POSITIONS_DEFINED)
 sampler2D CloudPositions;
 sampler2D CloudColours;
 float4 CloudPositions_TexelSize;
 float4 CloudColours_TexelSize;
+#define CLOUD_POSITIONS_DEFINED
+#endif
 
 
 //	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
@@ -130,6 +133,10 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 	float4 RayHitCloudPos = float4(0,0,0,0);
 	float2 RayHitUv = RayPosUv;
 
+#if defined(CLOUD_SAMPLE_FUNCTION)
+	CLOUD_SAMPLE_FUNCTION( RayPosWorld, RayPosUv, RayHitCloudPos, RayHitUv );
+#else
+
 #if !defined(CLOUD_RAYMARCH_SAMPLE_RADIUS)
 	#define SampleRadius	0
 #else
@@ -153,7 +160,7 @@ float4 GetCameraNearestCloudPosition(float3 RayPosWorld,out float3 Colour)
 			}
 		}
 	}
-
+#endif
 	//RayHitCloudPos = tex2D(CloudPositions,RayHitUv);
 
 
