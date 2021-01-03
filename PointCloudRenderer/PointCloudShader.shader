@@ -8,7 +8,8 @@
 		[Toggle]Billboard("Billboard", Range(0,1)) = 1
 		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
-
+		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
+		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
     }
     SubShader
     {
@@ -33,9 +34,10 @@
 
             struct v2f
             {
-                float2 uv : TEXCOORD0;
+                float2 SampleUv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
 				float4 OverrideColour : TEXCOORD1;
+                float2 TriangleUv : TEXCOORD2;
             };
 
 			//sampler2D CloudPositions;
@@ -53,8 +55,31 @@
 #define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5)
 #define DEBUG_INVALIDPOSITIONS	(Debug_InvalidPositions>0.5)
 
+			float ClipToQuad;
+			#define CLIP_TO_QUAD	(ClipToQuad>0.5f)
+			float ClipQuadSize;
 			//float4x4 CameraToWorld;
 
+			float3 NormalToRedGreen(float Normal)
+			{
+				if (Normal < 0.0)
+				{
+					return float3(0, 1, 1);
+				}
+				if (Normal < 0.5)
+				{
+					Normal = Normal / 0.5;
+					return float3(1, Normal, 0);
+				}
+				else if (Normal <= 1)
+				{
+					Normal = (Normal - 0.5) / 0.5;
+					return float3(1 - Normal, 1, 0);
+				}
+
+				//	>1
+				return float3(0, 0, 1);
+			}
 
             v2f vert (appdata v)
             {
@@ -71,14 +96,17 @@
 				//	gr: here, do billboarding, and repalce below with UnityWorldToClipPos
 				v2f o;
 				o.vertex = UnityObjectToClipPos(CameraPosition);
-                o.uv = ColourUv;
+                o.SampleUv = ColourUv;
+				o.TriangleUv = VertexUv;
 				o.OverrideColour = float4(0, 0, 0, 0);
 				
-				if (!Valid && DEBUG_INVALIDPOSITIONS)
+				if ( Validf < 1.0 && DEBUG_INVALIDPOSITIONS )
 				{
 					o.OverrideColour = float4(0, 1, 0, 1);
+					o.OverrideColour.xyz = NormalToRedGreen(Validf);
 				}
-				else if (!Valid && !DRAW_INVALIDPOSITIONS)
+
+				if (!Valid && !DRAW_INVALIDPOSITIONS && !DEBUG_INVALIDPOSITIONS)
 				{
 					o.vertex = float4(0, 0, 0, 0);
 				}
@@ -89,8 +117,13 @@
 			float4 frag (v2f i) : SV_Target
             {
                 // sample the texture
-                float4 Colour = tex2D(CloudColours, i.uv);
+                float4 Colour = tex2D(CloudColours, i.SampleUv);
 				Colour = lerp(Colour, i.OverrideColour, i.OverrideColour.w);
+
+				if ( CLIP_TO_QUAD )
+					if ( i.TriangleUv.x > ClipQuadSize || i.TriangleUv.y > ClipQuadSize )
+						discard;
+
                 return Colour;
             }
             ENDCG
