@@ -171,7 +171,7 @@ namespace Panopoly
 }
 
 
-
+[ExecuteInEditMode]
 public class PanopolyViewer : MonoBehaviour
 {
 	[System.Serializable]
@@ -313,6 +313,26 @@ public class PanopolyViewer : MonoBehaviour
 			Stream.DecodeToTime(DecodeTime,DecodeKeyframeOnly);
 		}
 	}
+
+#if UNITY_EDITOR
+	void OnEnable()
+	{
+		UnityEditor.EditorApplication.update += EditorUpdate;
+	}
+
+	void EditorUpdate()
+	{
+		//	when paused, trigger re-blits
+		if (BlitEveryFrame)
+			if (UnityEditor.EditorApplication.isPaused)
+				UpdateFrame();
+	}
+
+	void OnDisable()
+	{
+		UnityEditor.EditorApplication.update -= EditorUpdate;
+	}
+#endif
 
 	void UpdateFrame()
 	{
