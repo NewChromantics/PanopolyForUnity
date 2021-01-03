@@ -20,6 +20,8 @@ float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Va
 #define Vertex_uv_TriangleIndex_To_CloudUvs	Vertex_uv_TriangleIndex_To_CloudUvs_float
 void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,out float3 Position,out float2 ColourUv,out float Valid)
 {
+	bool JoinToNeighbour = true;
+
 	float u = PointMapUv.x;
 	float v = PointMapUv.y;
 	ColourUv = float2(u, 1.0 - v);	
@@ -36,6 +38,9 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 	PositionUv.xy += PositionsTexelSize * 0.5f;
 
+	if ( JoinToNeighbour )
+		PositionUv.xy += PositionsTexelSize * VertexUv;
+
 	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
 	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);	
 
@@ -45,7 +50,7 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	//Valid = PositionSample.w > 0.5;
 
 	//	local space offset of the triangle
-	float3 VertexPosition = float3(VertexUv, 0) * PointSize;
+	float3 VertexPosition = float3(VertexUv, 0) * (JoinToNeighbour ? 0 : PointSize);
 	CameraPosition += VertexPosition;
 	
 	//return CameraPosition.xyz;
