@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using PopCap;
@@ -356,6 +356,8 @@ public class PanopolyViewer : MonoBehaviour
 				UpdateBlitColour(NewFrame.Value);
 		}
 
+		//	gr: I think this function is allocating a lot, and with update-whilst-paused, a collection doesn't seem to occur
+		System.GC.Collect();
 		/*
 		//	gr this needs to sync with frame output
 		//	maybe this component should just blit, then send complete texture with timecode to something else
