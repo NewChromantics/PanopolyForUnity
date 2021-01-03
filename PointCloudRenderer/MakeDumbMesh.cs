@@ -12,7 +12,7 @@ public class MakeDumbMesh : MonoBehaviour
 	[Range(2, 2048)]
 	public int PointCountHeight = 480;
 	public int PointCount { get { return PointCountWidth * PointCountHeight; } }
-	public int VertexCount { get { return PointCount * (CreateQuads?4:3); } }
+	public int VertexCount { get { return PointCount * (CreateQuads?6:3); } }
 
 	public bool CreateQuads = false;
 
