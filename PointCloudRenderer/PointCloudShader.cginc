@@ -30,6 +30,12 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	//ColourUv += VertexUv * float2(PointSize, PointSize)*ColourTexelSize;
 
 	float4 PositionUv = float4(u, v, 0, 0);
+
+	//	sample from middle of texels to avoid odd samples (or bilinear accidents)
+	//	gr: get proper size!
+	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
+	PositionUv.xy += PositionsTexelSize * 0.5f;
+
 	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
 	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);	
 
