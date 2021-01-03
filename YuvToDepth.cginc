@@ -7,6 +7,12 @@ struct PopYuvEncodingParams
 	bool PingPongLuma;
 };
 
+struct PopYuvDecodingParams
+{
+	bool Debug_IgnoreMinor;
+	bool Debug_IgnoreMajor;
+};
+
 //	C struct
 typedef int uint8_t;
 typedef int uint16_t;
@@ -85,10 +91,19 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 //	convert YUV sampled values into local/camera depth
 //	multiply this, plus camera uv (so u,v,z,1) with a projection matrix to get world space position
-float GetLocalDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,out bool Valid,float ValidMinMetres)
+float GetLocalDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,out bool Valid,float ValidMinMetres)
 {
 	//	todo: do noise reduction here (see web)
 	Valid = true;
+
+	if ( DecodingParams.Debug_IgnoreMinor )
+		Luma = 0;
+
+	if ( DecodingParams.Debug_IgnoreMajor )
+	{
+		ChromaU = 0;
+		ChromaV = 0;
+	}
 
 	EncodeParams_t Params;
 	Params.DepthMin = EncodingParams.DepthMinMetres * 1000;

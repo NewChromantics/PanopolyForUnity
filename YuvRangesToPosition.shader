@@ -16,6 +16,9 @@
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
 		[Toggle]Flip("Flip",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
+		[Toggle]Debug_IgnoreMinor("Debug_IgnoreMinor",Range(0,1)) = 0
+		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
+		[Toggle]Debug_MinorAsValid("Debug_MinorAsValid",Range(0,1))=0
 	}
 	
 		SubShader
@@ -64,7 +67,13 @@
 				float Debug_Depth;
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
 
+				float Debug_MinorAsValid;
+				#define DEBUG_MINOR_AS_VALID	(Debug_MinorAsValid>0.5f)
+
 				float ValidMinMetres;
+
+				float Debug_IgnoreMinor;
+				float Debug_IgnoreMajor;
 
 				v2f vert(appdata v)
 				{
@@ -130,16 +139,21 @@
 				
 				fixed4 frag(v2f i) : SV_Target
 				{
-					PopYuvEncodingParams Params;
-					Params.ChromaRangeCount = Encoded_ChromaRangeCount;
-					Params.DepthMinMetres = Encoded_DepthMinMetres;
-					Params.DepthMaxMetres = Encoded_DepthMaxMetres;
-					Params.PingPongLuma = Encoded_LumaPingPong;
+					PopYuvEncodingParams EncodeParams;
+					EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
+					EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
+					EncodeParams.DepthMaxMetres = Encoded_DepthMaxMetres;
+					EncodeParams.PingPongLuma = Encoded_LumaPingPong;
+
+					PopYuvDecodingParams DecodeParams;
+					DecodeParams.Debug_IgnoreMinor = Debug_IgnoreMinor > 0.5f;
+					DecodeParams.Debug_IgnoreMajor = Debug_IgnoreMajor > 0.5f;
+
 
 					float Luma = GetLuma(i.uv);
 					float2 ChromaUV = GetChromaUv(i.uv);
 					bool Valid = true;
-					float LocalDepth = GetLocalDepth(Luma, ChromaUV.x, ChromaUV.y, Params, Valid, ValidMinMetres);
+					float LocalDepth = GetLocalDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, Valid, ValidMinMetres);
 					
 					
 					//	this output should be in camera-local space
@@ -147,7 +161,10 @@
 					float x = lerp(-1,1,i.uv.x); 
 					float y = lerp(-1,1,i.uv.y);
 					float z = LocalDepth;
-					
+
+					if ( DEBUG_MINOR_AS_VALID )
+						return float4(x,y,z, Luma);
+
 					//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 					//	because webgl cant always do float textures so is quantized 8bit
 					//	in native, we could
