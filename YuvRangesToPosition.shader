@@ -14,7 +14,8 @@
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
-		[Toggle]Flip("Flip",Range(0,1)) = 0
+		[Toggle]FlipSample("FlipSample",Range(0,1)) = 0
+		[Toggle]FlipOutput("FlipOutput",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
 		[Toggle]Debug_IgnoreMinor("Debug_IgnoreMinor",Range(0,1)) = 0
 		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
@@ -47,8 +48,10 @@
 					float4 vertex : SV_POSITION;
 				};
 
-				float Flip;
-#define FLIP	(Flip>0.5f)
+				float FlipSample;
+#define FLIP_SAMPLE	(FlipSample>0.5f)
+				float FlipOutput;
+#define FLIP_OUTPUT	(FlipOutput>0.5f)
 				float _Angle;
 				sampler2D LumaPlane;
 				float4 LumaPlane_ST;
@@ -92,7 +95,7 @@
 	                o.uv = mul(rot, uv);
 	                o.uv += pivot;
 
-					if ( FLIP )
+					if ( FLIP_SAMPLE )
 						o.uv.y = 1.0 - o.uv.y;
 					
 					//o.uv = TRANSFORM_TEX(v.uv, LumaPlane);
@@ -159,7 +162,7 @@
 					//	this output should be in camera-local space
 					//	need a proper inverse projection matrix here to go from pixel/uv to projected out from camera
 					float x = lerp(-1,1,i.uv.x); 
-					float y = lerp(-1,1,i.uv.y);
+					float y = FLIP_OUTPUT ? lerp(1,-1,i.uv.y) : lerp(-1,1,i.uv.y);
 					float z = LocalDepth;
 
 					if ( DEBUG_MINOR_AS_VALID )
