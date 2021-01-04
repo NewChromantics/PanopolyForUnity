@@ -23,18 +23,21 @@ float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 	float2 LeftUv = PositionMapUv;
 	float2 RightUv = PositionMapUv + float2(PositionsTexelSize.x,0);
 	float2 UpUv = PositionMapUv + float2(0,PositionsTexelSize.y);
+	float2 OppUv = PositionMapUv + PositionsTexelSize;	//	opposite
 
 	float SampleMip = 0;
-	float4 LeftSample = Positions.SampleLevel( PositionsSampler, LeftUv.xy, SampleMip );	
-	float4 RightSample = Positions.SampleLevel( PositionsSampler, RightUv.xy, SampleMip );	
-	float4 UpSample = Positions.SampleLevel( PositionsSampler, UpUv.xy, SampleMip );	
+	float4 LeftSample = Positions.SampleLevel( PositionsSampler, LeftUv, SampleMip );	
+	float4 RightSample = Positions.SampleLevel( PositionsSampler, RightUv, SampleMip );	
+	float4 UpSample = Positions.SampleLevel( PositionsSampler, UpUv, SampleMip );	
+	float4 OppSample = Positions.SampleLevel( PositionsSampler, OppUv, SampleMip );	
 
 	float RightDistance = distance(LeftSample.xyz,RightSample.xyz);
 	float UpDistance = distance(LeftSample.xyz,UpSample.xyz);
-	float UpRightDistance = distance(UpSample.xyz,RightSample.xyz);
+	float OppDistance = distance(LeftSample.xyz,OppSample.xyz);
+
 	float BigDistance = RightDistance;
 	BigDistance = max( BigDistance, UpDistance);
-	BigDistance = max( BigDistance, UpRightDistance);
+	BigDistance = max( BigDistance, OppDistance);
 
 	
 

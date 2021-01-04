@@ -98,7 +98,7 @@
 
 				Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, Validf);
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
-				bool Valid = Validf > 0.5;
+				bool Valid = Validf > 0.0f;
 
 				//	gr: here, do billboarding, and repalce below with UnityWorldToClipPos
 				v2f o;
@@ -113,7 +113,7 @@
 					o.OverrideColour.xyz = NormalToRedGreen(Validf);
 				}
 
-				if (!Valid && !DRAW_INVALIDPOSITIONS && !DEBUG_INVALIDPOSITIONS)
+				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
 					o.vertex = float4(0, 0, 0, 0);
 				}
