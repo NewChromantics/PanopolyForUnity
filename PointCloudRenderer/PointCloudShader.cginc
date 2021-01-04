@@ -21,8 +21,8 @@ float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 
 	float2 LeftUv = PositionMapUv;
-	float2 RightUv = PositionMapUv + PositionsTexelSize;
-	float2 UpUv = PositionMapUv + PositionsTexelSize.yx;
+	float2 RightUv = PositionMapUv + float2(PositionsTexelSize.x,0);
+	float2 UpUv = PositionMapUv + float2(0,PositionsTexelSize.y);
 
 	float SampleMip = 0;
 	float4 LeftSample = Positions.SampleLevel( PositionsSampler, LeftUv.xy, SampleMip );	
