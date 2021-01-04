@@ -13,20 +13,33 @@ float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Va
 }
 */
 
+
+
 //	dont weld to edge
-bool IsRightEdge(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
+float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
 {
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 
 	float2 LeftUv = PositionMapUv;
 	float2 RightUv = PositionMapUv + PositionsTexelSize;
+	float2 UpUv = PositionMapUv + PositionsTexelSize.yx;
 
 	float SampleMip = 0;
 	float4 LeftSample = Positions.SampleLevel( PositionsSampler, LeftUv.xy, SampleMip );	
 	float4 RightSample = Positions.SampleLevel( PositionsSampler, RightUv.xy, SampleMip );	
+	float4 UpSample = Positions.SampleLevel( PositionsSampler, UpUv.xy, SampleMip );	
 
-	float Distance = distance(LeftSample.xyz,RightSample.xyz);
-	return Distance > MaxWeldDistance;
+	float RightDistance = distance(LeftSample.xyz,RightSample.xyz);
+	float UpDistance = distance(LeftSample.xyz,UpSample.xyz);
+	float UpRightDistance = distance(UpSample.xyz,RightSample.xyz);
+	float BigDistance = RightDistance;
+	BigDistance = max( BigDistance, UpDistance);
+	BigDistance = max( BigDistance, UpRightDistance);
+
+	
+
+	float Distance = BigDistance;
+	return Distance / MaxWeldDistance;
 }
 
 //	gr: shadergraph fails looking for
@@ -34,10 +47,8 @@ bool IsRightEdge(Texture2D<float4> Positions,SamplerState PositionsSampler,float
 //	because of missing reference to 
 //		Vertex_uv_TriangleIndex_To_CloudUvs_float
 #define Vertex_uv_TriangleIndex_To_CloudUvs	Vertex_uv_TriangleIndex_To_CloudUvs_float
-void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,out float3 Position,out float2 ColourUv,out float Valid)
+void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float Valid)
 {
-	bool WeldToNeighbour = true;
-
 	float u = PointMapUv.x;
 	float v = PointMapUv.y;
 	ColourUv = float2(u, 1.0 - v);	
@@ -47,14 +58,14 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float2 ColourTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 	//ColourUv += VertexUv * float2(PointSize, PointSize)*ColourTexelSize;
 
-	float4 PositionUv = float4(u, v, 0, 0);
-
 	//	sample from middle of texels to avoid odd samples (or bilinear accidents)
 	//	gr: get proper size! 
+	float4 PositionUv = float4(u, v, 0, 0);
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 	PositionUv.xy += PositionsTexelSize * 0.5f;
 
-	bool IsEdge = IsRightEdge(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
+	float EdgeScore = GetEdgeScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
+	bool IsEdge = EdgeScore >= 1.0;
 
 	//	if welding, move our vertex to the next position
 	if ( WeldToNeighbour )
@@ -66,13 +77,15 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
 	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);	
 
-	Valid = PositionSample.w;
+	//Valid = PositionSample.w;
+	//Valid *= IsEdge ? 0 : 1;
+	Valid = 1 - EdgeScore;
 
 	float3 CameraPosition = PositionSample.xyz;
 	//Valid = PositionSample.w > 0.5;
 
-	//	local space offset of the triangle 
-	float3 VertexPosition = float3(VertexUv, 0) * (WeldToNeighbour ? 0 : PointSize);
+	//	local space offset of the triangle
+	float3 VertexPosition = float3(VertexUv, 0) * ((WeldToNeighbour&&!IsEdge) ? 0 : PointSize);
 	CameraPosition += VertexPosition;
 	
 	//return CameraPosition.xyz;

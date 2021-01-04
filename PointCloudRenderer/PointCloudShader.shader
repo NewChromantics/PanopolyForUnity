@@ -10,6 +10,7 @@
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
+		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
 		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.1))=0.02
     }
     SubShader
@@ -61,6 +62,8 @@
 			float ClipQuadSize;
 			//float4x4 CameraToWorld;
 
+			float WeldToNeighbour;
+			#define WELD_TO_NEIGHBOUR	(WeldToNeighbour>0.5f)
 			float MaxWeldDistance;
 
 			float3 NormalToRedGreen(float Normal)
@@ -93,7 +96,7 @@
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
 
-				Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, CameraPosition, ColourUv, Validf);
+				Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, Validf);
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
 				bool Valid = Validf > 0.5;
 
