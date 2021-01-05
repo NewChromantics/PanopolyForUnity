@@ -44,8 +44,8 @@ namespace PopCap
 	[System.Serializable]
 	public class TCamera
 	{
-		public float[] Intrinsics;
-		public float[] IntrinsicsCameraResolution;  //	wxh
+		public float[] Intrinsics;					//	3x3 matrix (fx 0 cx, 0 fy cy)
+		public float[] IntrinsicsCameraResolution;  //	w x h x depth unit
 		public float[] LocalEulerRadians;
 
 
@@ -69,7 +69,16 @@ namespace PopCap
 			//	this width/height/mm should match the projection matrix values
 			if (IntrinsicsCameraResolution == null|| IntrinsicsCameraResolution.Length == 0)
 			{
-				return new Vector3(1, 1, 1000);
+				//	if there is an intrinsic/projection matrix, we can assume size. if we use 1,1 with that, it'll be tiny
+				if ( Intrinsics != null && Intrinsics.Length > 4 )
+				{
+					var fx = Intrinsics[0];
+					var fy = Intrinsics[4];
+					return new Vector3(fx, fy, 1000);
+				}
+
+				//	this will be wrong, but if there is no intrinsic matrix, then these numbers dont matter
+				return new Vector3(500, 500, 1000);
 			}
 			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
 		}
@@ -170,7 +179,17 @@ namespace PopCap
 			if ( Intrinsics == null || Intrinsics.Length == 0 )
 			{
 				//	fallback
-				return Matrix4x4.identity;
+				//	to match arkit, make sure we have a center so the data is expected to be -1...1
+				//return Matrix4x4.identity;
+				var WidthHeightDepth = GetCameraSpaceViewportMax();
+				var Def_fx = WidthHeightDepth.x;
+				var Def_fy = WidthHeightDepth.y;
+				var Def_cx = WidthHeightDepth.x / 2.0f;
+				var Def_cy = WidthHeightDepth.y / 2.0f;
+				Intrinsics = new float[6] {
+					Def_fx,	0,		Def_cx,
+					0,		Def_fy,	Def_cy
+				};
 			}
 
 			//	from 3x3 intrinsics matrix

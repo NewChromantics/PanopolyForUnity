@@ -1,4 +1,4 @@
-﻿Shader "Panopoly/YuvRangesToPosition"
+Shader "Panopoly/YuvRangesToPosition"
 {
 	Properties
 	{
@@ -175,8 +175,7 @@
 					//	this output should be in camera-local space
 					//	need a proper inverse projection matrix here to go from pixel/uv to projected out from camera
 
-					//float x = lerp(-1,1,i.uv.x); 
-					//float y = lerp(-1,1,i.uv.y);
+					//	gr: projection matrix expects 0..1 
 					float x = lerp(0,1,i.uv.x); 
 					float y = FLIP_OUTPUT ? lerp(1,0,i.uv.y) : lerp(0,1,i.uv.y);
 					float z = CameraDepth;
