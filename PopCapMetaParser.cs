@@ -66,6 +66,11 @@ namespace PopCap
 		public Vector3 GetCameraSpaceViewportMax()
 		{
 			//	ios depth in mm
+			//	this width/height/mm should match the projection matrix values
+			if (IntrinsicsCameraResolution == null|| IntrinsicsCameraResolution.Length == 0)
+			{
+				return new Vector3(1, 1, 1000);
+			}
 			return new Vector3(IntrinsicsCameraResolution[0], IntrinsicsCameraResolution[1], 1000);
 		}
 
@@ -129,7 +134,7 @@ namespace PopCap
 
 		public Matrix4x4 GetLocalToWorld()
 		{
-			if (LocalToWorld == null)
+			if (LocalToWorld == null || LocalToWorld.Length == 0 )
 				return Matrix4x4.identity;
 
 			var Row0 = new Vector4(LocalToWorld[0], LocalToWorld[1], LocalToWorld[2], LocalToWorld[3]);
@@ -162,6 +167,12 @@ namespace PopCap
 		//	todo: make source transform to uv space
 		public Matrix4x4 GetCameraToLocal()
 		{
+			if ( Intrinsics == null || Intrinsics.Length == 0 )
+			{
+				//	fallback
+				return Matrix4x4.identity;
+			}
+
 			//	from 3x3 intrinsics matrix
 			//	fx 0 cx
 			//	0 fy cy
