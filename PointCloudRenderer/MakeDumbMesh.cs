@@ -34,7 +34,8 @@ public class MakeDumbMesh : MonoBehaviour
 	void GenerateMesh()
 	{
 		//	modify existing asset where possible
-		mesh = MakeMesh(PointCountWidth, PointCountHeight, CreateQuads, mesh);
+		var OverrideBounds = GetOverrideMeshBounds();
+		mesh = MakeMesh(PointCountWidth, PointCountHeight, CreateQuads, mesh, OverrideBounds );
 		//	try and make the user save it as a file
 #if UNITY_EDITOR
 		mesh = AssetWriter.SaveAsset(mesh);

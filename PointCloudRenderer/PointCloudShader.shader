@@ -75,27 +75,6 @@
 #define IS_SDF	(CloudPositionsAreSdf>0.5f)
 
 
-			float3 NormalToRedGreen(float Normal)
-			{
-				if (Normal < 0.0)
-				{
-					return float3(0, 1, 1);
-				}
-				if (Normal < 0.5)
-				{
-					Normal = Normal / 0.5;
-					return float3(1, Normal, 0);
-				}
-				else if (Normal <= 1)
-				{
-					Normal = (Normal - 0.5) / 0.5;
-					return float3(1 - Normal, 1, 0);
-				}
-
-				//	>1
-				return float3(0, 0, 1);
-			}
-
             v2f vert (appdata v)
             {
 				//	position in camera space

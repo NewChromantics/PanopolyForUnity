@@ -126,8 +126,7 @@ namespace Panopoly
 				{
 					if (NextDecodedFrame.Value.Meta.GetFrameTimeMs() > Milliseconds)
 					{
-						if (VerboseDebug)
-							Debug.Log("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.Meta.GetFrameTimeMs() + ">"+Milliseconds);
+						Debug("Stream " + Name + " next frame in future: " + NextDecodedFrame.Value.Meta.GetFrameTimeMs() + ">"+Milliseconds);
 						return NoFrame();
 					}
 
@@ -156,8 +155,7 @@ namespace Panopoly
 					return PrevFrame;
 				}
 				NewFrame.FrameNumber = NewFrameNumberMaybe.Value;
-				if (VerboseDebug)
-					Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + "(last sent=" + (FrameCounter - 1) +" )");
+				Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrame.FrameNumber))
 				{
 					NewFrame.Meta = FrameMetas[NewFrame.FrameNumber];
