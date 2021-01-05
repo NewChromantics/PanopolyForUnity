@@ -20,7 +20,7 @@
 		[Toggle]Debug_IgnoreMinor("Debug_IgnoreMinor",Range(0,1)) = 0
 		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
 		[Toggle]Debug_MinorAsValid("Debug_MinorAsValid",Range(0,1))=0
-		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	)
+		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	) 
 		CameraToLocalViewportMin("CameraToLocalViewportMin",VECTOR) = (0,0,0)
 		CameraToLocalViewportMax("CameraToLocalViewportMax",VECTOR) = (640,480,1000)
 		[Toggle]ApplyLocalToWorld("ApplyLocalToWorld",Range(0,1))=0
@@ -206,9 +206,10 @@
 					//	because webgl cant always do float textures so is quantized 8bit
 					//	in native, we could
 					float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
-					
+
+
                     if ( DEBUG_MINOR_AS_VALID )
-						return float4(x,y,z, Luma);
+						return float4(OutputPosition, Luma);
 
 					if ( DEBUG_DEPTH )
 					{
