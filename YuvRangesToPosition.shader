@@ -1,9 +1,7 @@
-Shader "Panopoly/YuvRangesToPosition"
+﻿Shader "Panopoly/YuvRangesToPosition"
 {
 	Properties
 	{
-		_Angle ("Angle", Range(-5.0,  5.0)) = 0.0
-
 		[MainTexture]LumaPlane("LumaPlane", 2D) = "white" {}
 		Plane2("Plane2", 2D) = "white" {}
 		Plane3("Plane3", 2D) = "white" {}
@@ -97,17 +95,7 @@ Shader "Panopoly/YuvRangesToPosition"
 					v2f o;
 					o.vertex = UnityObjectToClipPos(v.vertex);
 
-					// Pivot
-	                float2 pivot = float2(0.5, 0.5);
-	                // Rotation Matrix
-	                float cosAngle = cos(_Angle);
-	                float sinAngle = sin(_Angle);
-	                float2x2 rot = float2x2(cosAngle, -sinAngle, sinAngle, cosAngle);
-	 
-	                // Rotation consedering pivot
-	                float2 uv = TRANSFORM_TEX(v.uv, LumaPlane) - pivot;
-	                o.uv = mul(rot, uv);
-	                o.uv += pivot;
+	                o.uv = v.uv;
 
 					if ( FLIP_SAMPLE )
 						o.uv.y = 1.0 - o.uv.y;
