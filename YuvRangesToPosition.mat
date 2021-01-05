@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: YuvRangesToPosition
   m_Shader: {fileID: 4800000, guid: 25f8313c71d64284d8f339711255eb09, type: 3}
-  m_ShaderKeywords: ENCODED_LUMAPINGPONG_ON
+  m_ShaderKeywords: ENCODED_LUMAPINGPONG_ON FLIPOUTPUT_ON FLIPSAMPLE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -45,13 +45,18 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Debug_Depth: 0
-    - Encoded_ChromaRangeCount: 36
+    - Debug_IgnoreMajor: 0
+    - Debug_IgnoreMinor: 0
+    - Debug_MinorAsValid: 0
+    - Encoded_ChromaRangeCount: 10
     - Encoded_DepthMaxMetres: 5
     - Encoded_DepthMinMetres: 0
     - Encoded_DepthRanges: 1
     - Encoded_LumaPingPong: 0
     - Flip: 0
+    - FlipOutput: 1
+    - FlipSample: 1
     - PlaneCount: 2
-    - ValidMinMetres: 0.01
+    - ValidMinMetres: 0
     - _Angle: 0
     m_Colors: []
