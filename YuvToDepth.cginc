@@ -75,6 +75,8 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	//ChromaUv = floor(ChromaUv + float2(0.5, 0.5) );
 	int Index = x + (y*Width);
 
+	bool PingPong = (Index & 1) && Params.PingPongLuma;
+
 	float Indexf = Index / float(RangeMax);
 	float Nextf = (Index + 1) / float(RangeMax);
 	//return float2(Indexf, Nextf);
@@ -83,6 +85,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	Indexf = Lerp(Params.DepthMin, Params.DepthMax, Indexf);
 	Nextf = Lerp(Params.DepthMin, Params.DepthMax, Nextf);
 	float Lumaf = Luma / 255.0f;
+	Lumaf = PingPong ? (1.0-Lumaf) : Lumaf;
 	float Depth = Lerp(Indexf, Nextf, Lumaf);
 	uint16_t Depth16 = Depth;
 
@@ -91,7 +94,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 //	convert YUV sampled values into local/camera depth
 //	multiply this, plus camera uv (so u,v,z,1) with a projection matrix to get world space position
-float GetLocalDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,out bool Valid,float ValidMinMetres)
+float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,out bool Valid,float ValidMinMetres)
 {
 	//	todo: do noise reduction here (see web)
 	Valid = true;

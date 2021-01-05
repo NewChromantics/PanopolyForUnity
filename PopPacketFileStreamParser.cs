@@ -139,10 +139,16 @@ public class PopPacketFileStreamParser : MonoBehaviour
 			return;
 		}
 
+		int DataProcessedCounter = 0;
 		while (true)
 		{
 			if (!ProcessNextData())
 				break;
+			DataProcessedCounter++;
+		}
+		if (VerboseDebug && DataProcessedCounter > 0)
+		{
+			Debug.Log("PopPacketFileStreamer processed x" + DataProcessedCounter + " packets this frame");
 		}
 	}
 }

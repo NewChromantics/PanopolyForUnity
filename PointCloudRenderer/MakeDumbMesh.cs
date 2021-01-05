@@ -7,14 +7,29 @@ public class MakeDumbMesh : MonoBehaviour
 {
 	public Mesh mesh;
 
-	[Range(2, 2048)]
+	[Range(2, 4096)]
 	public int PointCountWidth = 640;
-	[Range(2, 2048)]
+	[Range(2, 4096)]
 	public int PointCountHeight = 480;
 	public int PointCount { get { return PointCountWidth * PointCountHeight; } }
 	public int VertexCount { get { return PointCount * (CreateQuads?6:3); } }
 
 	public bool CreateQuads = false;
+
+	[Header("If there is a bounding box sibiling, or specified, the mesh will take that [local] bounds")]
+	public BoxCollider BoundingBox;
+
+	Bounds? GetOverrideMeshBounds()
+	{
+		if (BoundingBox != null)
+			return BoundingBox.bounds;
+
+		var ThisBoundingBox = GetComponent<BoxCollider>();
+		if (ThisBoundingBox != null)
+			return ThisBoundingBox.bounds;
+
+		return null;
+	}
 
 	void GenerateMesh()
 	{
@@ -101,8 +116,7 @@ public class MakeDumbMesh : MonoBehaviour
 		}
 	}
 
-
-	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,bool CreateQuads,Mesh ExistingMesh)
+	public static Mesh MakeMesh(int PointCountWidth, int PointCountHeight,bool CreateQuads,Mesh ExistingMesh,Bounds? OverrideBounds)
 	{
 		var Name = (CreateQuads?"Quad":"Triangle") + " Mesh " + PointCountWidth + "x" + PointCountHeight;
 		Debug.Log("Generating new mesh " + Name);
@@ -130,6 +144,9 @@ public class MakeDumbMesh : MonoBehaviour
 
 		Mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 		Mesh.SetIndices(Indexes.ToArray(), MeshTopology.Triangles, 0, true );
+
+		if (OverrideBounds.HasValue)
+			Mesh.bounds = OverrideBounds.Value;
 
 		return Mesh;
 	}

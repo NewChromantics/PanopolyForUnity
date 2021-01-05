@@ -95,3 +95,58 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	Position = CameraPosition.xyz;
 }
 
+
+float3 NormalToRedGreen(float Normal)
+{
+	if (Normal < 0.0)
+	{
+		return float3(1, 0, 1);
+	}
+	if (Normal < 0.5)
+	{
+		Normal = Normal / 0.5;
+		return float3(1, Normal, 0);
+	}
+	else if (Normal <= 1)
+	{
+		Normal = (Normal - 0.5) / 0.5;
+		return float3(1 - Normal, 1, 0);
+	}
+
+	//	>1
+	return float3(0, 0, 1);
+}
+
+float MaxSdfDistance;
+float RenderSdfMinScore;
+#define MAX_SDF_DISTANCE MaxSdfDistance
+
+void Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,out float3 Position,out float3 Colour,out float Valid)
+{
+	float u = PointMapUv.x;
+	float v = PointMapUv.y;
+	//ColourUv = float2(u, 1.0 - v);	
+	
+	//	uv needs to be varying across the point PointSize
+	//	so, PointSize*Texelsize
+	float2 ColourTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
+	//ColourUv += VertexUv * float2(PointSize, PointSize)*ColourTexelSize;
+
+	float4 PositionUv = float4(u, v, 0, 0);
+	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
+	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);	
+
+	//Valid = PositionSample.w;
+	float Score = 1.0 - min(1.0,PositionSample.w/MAX_SDF_DISTANCE);
+	Colour = NormalToRedGreen(Score);
+
+	float3 CameraPosition = PositionSample.xyz;
+	Valid = Score >= RenderSdfMinScore;
+
+	//	local space offset of the triangle
+	float3 VertexPosition = float3(VertexUv, 0) * PointSize;
+	CameraPosition += VertexPosition;
+	
+	//return CameraPosition.xyz;
+	Position = CameraPosition.xyz;
+}

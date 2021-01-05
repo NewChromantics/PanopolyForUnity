@@ -20,6 +20,10 @@
 		[Toggle]Debug_IgnoreMinor("Debug_IgnoreMinor",Range(0,1)) = 0
 		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
 		[Toggle]Debug_MinorAsValid("Debug_MinorAsValid",Range(0,1))=0
+		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	)
+		CameraToLocalViewportMin("CameraToLocalViewportMin",VECTOR) = (0,0,0)
+		CameraToLocalViewportMax("CameraToLocalViewportMax",VECTOR) = (640,480,1000)
+		[Toggle]ApplyLocalToWorld("ApplyLocalToWorld",Range(0,1))=0
 	}
 	
 		SubShader
@@ -66,6 +70,16 @@
 				float Encoded_DepthMinMetres;
 				float Encoded_DepthMaxMetres;
 				bool Encoded_LumaPingPong;
+
+
+				//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
+				float3 CameraToLocalViewportMin;
+				float3 CameraToLocalViewportMax;
+				float4x4 CameraToLocalTransform;
+
+				float4x4 LocalToWorldTransform;
+				float ApplyLocalToWorld;
+				#define APPLY_LOCAL_TO_WORLD	(ApplyLocalToWorld>0.5)
 				
 				float Debug_Depth;
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
@@ -156,30 +170,54 @@
 					float Luma = GetLuma(i.uv);
 					float2 ChromaUV = GetChromaUv(i.uv);
 					bool Valid = true;
-					float LocalDepth = GetLocalDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, Valid, ValidMinMetres);
-					
+					float CameraDepth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, Valid, ValidMinMetres);
 					
 					//	this output should be in camera-local space
 					//	need a proper inverse projection matrix here to go from pixel/uv to projected out from camera
-					float x = lerp(-1,1,i.uv.x); 
-					float y = FLIP_OUTPUT ? lerp(1,-1,i.uv.y) : lerp(-1,1,i.uv.y);
-					float z = LocalDepth;
 
-					if ( DEBUG_MINOR_AS_VALID )
-						return float4(x,y,z, Luma);
+					//float x = lerp(-1,1,i.uv.x); 
+					//float y = lerp(-1,1,i.uv.y);
+					float x = lerp(0,1,i.uv.x); 
+					float y = FLIP_OUTPUT ? lerp(1,0,i.uv.y) : lerp(0,1,i.uv.y);
+					float z = CameraDepth;
+					
+					//	now convert camera(image) space depth by the inverse of projection to get local-space
 
+					float4 CameraPosition = float4(x,y,z,1.0);
+
+					CameraPosition.xyz = lerp( CameraToLocalViewportMin, CameraToLocalViewportMax, CameraPosition.xyz );
+	
+					float4 CameraPosition4;
+					CameraPosition4.x = CameraPosition.x;
+					CameraPosition4.y = CameraPosition.y;
+					CameraPosition4.z = 1;
+					//	scale all by depth, this is undone by /w hence 1/z
+					//	surely this can go in the matrix....
+					CameraPosition4.w = 1/CameraDepth;
+
+					float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
+					float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
+
+
+					float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
+					float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
+				
 					//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 					//	because webgl cant always do float textures so is quantized 8bit
 					//	in native, we could
+					float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
+					
+                    if ( DEBUG_MINOR_AS_VALID )
+						return float4(x,y,z, Luma);
 
 					if ( DEBUG_DEPTH )
 					{
-						float3 Rgb = NormalToRedGreen(LocalDepth);
+						float3 Rgb = NormalToRedGreen(CameraDepth);
 						return float4(Rgb, 1.0);
 					}
 					
 					float Alpha = Valid ? 1.0 : 0.0;
-					return float4(x,y,z, Alpha);
+					return float4(OutputPosition, Alpha);
 				}
 				ENDCG
 			}
