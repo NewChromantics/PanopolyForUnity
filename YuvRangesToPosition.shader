@@ -141,8 +141,9 @@
 					float ChromaV = tex2D(ChromaVPlane, uv).x;
 					return float2(ChromaU,ChromaV);
 				}
+
 				
-				fixed4 frag(v2f i) : SV_Target
+				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv)
 				{
 					PopYuvEncodingParams EncodeParams;
 					EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
@@ -155,13 +156,25 @@
 					DecodeParams.Debug_IgnoreMajor = Debug_IgnoreMajor > 0.5f;
 
 
-					float Luma = GetLuma(i.uv);
-					float2 ChromaUV = GetChromaUv(i.uv);
-					bool Valid = true;
-					float CameraDepth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, Valid, ValidMinMetres);
-					
-					//	this output should be in camera-local space
-					//	need a proper inverse projection matrix here to go from pixel/uv to projected out from camera
+					float Luma = GetLuma(Sampleuv);
+					float2 ChromaUV = GetChromaUv(Sampleuv);
+					Depth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, ValidMinMetres);
+
+					Score = 1.0;
+
+					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
+					//	Popcap should standardise this to far-away 
+					if ( Depth < ValidMinMetres )
+						Score = 0;
+				}
+
+				
+				fixed4 frag(v2f i) : SV_Target
+				{					
+					//	this output should be in camera-local space 
+					float CameraDepth;
+					float DepthScore;
+					GetResolvedDepth(CameraDepth,DepthScore,i.uv);
 
 					//	gr: projection matrix expects 0..1 
 					float x = lerp(0,1,i.uv.x); 
@@ -195,17 +208,20 @@
 					float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
 
 
-                    if ( DEBUG_MINOR_AS_VALID )
+					if ( DEBUG_MINOR_AS_VALID )
+					{
+						float2 Sampleuv = i.uv;
+						float Luma = GetLuma(Sampleuv);
 						return float4(OutputPosition, Luma);
+					}
 
 					if ( DEBUG_DEPTH )
 					{
 						float3 Rgb = NormalToRedGreen(CameraDepth);
-						return float4(Rgb, 1.0);
+						return float4(Rgb, DepthScore);
 					}
 					
-					float Alpha = Valid ? 1.0 : 0.0;
-					return float4(OutputPosition, Alpha);
+					return float4(OutputPosition, DepthScore);
 				}
 				ENDCG
 			}

@@ -48,9 +48,9 @@ float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 //	gr: shadergraph fails looking for
 //		Vertex_uv_TriangleIndex_To_CloudUvs
 //	because of missing reference to 
-//		Vertex_uv_TriangleIndex_To_CloudUvs_float
+//		Vertex_uv_TriangleIndex_To_CloudUvs_float 
 #define Vertex_uv_TriangleIndex_To_CloudUvs	Vertex_uv_TriangleIndex_To_CloudUvs_float
-void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float Valid)
+void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float PositionScore,out float EdgeScore)
 {
 	float u = PointMapUv.x;
 	float v = PointMapUv.y;
@@ -67,8 +67,8 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 	PositionUv.xy += PositionsTexelSize * 0.5f;
 
-	float EdgeScore = GetEdgeScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
-	bool IsEdge = EdgeScore >= 1.0;
+	EdgeScore = 1 - GetEdgeScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
+	bool IsEdge = EdgeScore <= 0.0;
 
 	//	if welding, move our vertex to the next position
 	if ( WeldToNeighbour )
@@ -78,14 +78,11 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	}
 
 	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
-	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);	
+	float4 PositionSample = Positions.SampleLevel( PositionsSampler, PositionUv.xy, PositionUv.z);
+	PositionScore = PositionSample.w;
 
-	//Valid = PositionSample.w;
-	//Valid *= IsEdge ? 0 : 1;
-	Valid = 1 - EdgeScore;
 
 	float3 CameraPosition = PositionSample.xyz;
-	//Valid = PositionSample.w > 0.5;
 
 	//	local space offset of the triangle
 	float3 VertexPosition = float3(VertexUv, 0) * ((WeldToNeighbour&&!IsEdge) ? 0 : PointSize);

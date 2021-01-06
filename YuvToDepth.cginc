@@ -26,6 +26,7 @@ struct EncodeParams_t
 	uint16_t PingPongLuma;// = 0;
 };
 
+
 int Floor(float v)
 {
 	//	gr: I have a feeling there's a shader bug here, maybe it was only in webgl
@@ -60,11 +61,11 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	int Height = Width;
 	int RangeMax = (Width*Height) - 1;
 
-	//	gr: emulate shader
+	//	gr: emulate shader 
 	float ChromaUv_x = ChromaU / 255.f;
 	float ChromaUv_y = ChromaV / 255.f;
 
-	//	in the encoder, u=x%width and /width, so scales back up to -1
+	//	in the encoder, u=x%width and /width, so scales back up to -1 
 	float xf = ChromaUv_x * float(Width - 1);
 	float yf = ChromaUv_y * float(Height - 1);
 	//	we need the nearest, so we floor but go up a texel
@@ -94,11 +95,8 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 //	convert YUV sampled values into local/camera depth
 //	multiply this, plus camera uv (so u,v,z,1) with a projection matrix to get world space position
-float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,out bool Valid,float ValidMinMetres)
+float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,float ValidMinMetres)
 {
-	//	todo: do noise reduction here (see web)
-	Valid = true;
-
 	if ( DecodingParams.Debug_IgnoreMinor )
 		Luma = 0;
 
@@ -119,8 +117,8 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 	uint16_t DepthMm = YuvToDepth(Luma8, ChromaU8, ChromaV8, Params);
 	float Depthm = DepthMm / 1000.0;
 
-	//	for kinect camera, catch zero's, need to standardise this (chromarange==0)
-	Valid = Depthm >= ValidMinMetres;
+	//	for kinect camera, catch zero's, need to standardise this (chromarange==0) 
+	//Valid = Depthm >= ValidMinMetres;
 
 	return DepthMm / 1000.0;
 }

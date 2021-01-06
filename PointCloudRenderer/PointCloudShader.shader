@@ -8,7 +8,8 @@
 		PointSize("PointSize",Range(0.001,0.05)) = 0.01
 		[Toggle]Billboard("Billboard", Range(0,1)) = 1
 		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
-		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
+		[Toggle]Debug_EdgeScore("Debug_EdgeScore",Range(0,1))= 0
+		[Toggle]Debug_PositionScore("Debug_PositionScore",Range(0,1))= 0
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
@@ -57,9 +58,13 @@
 			float PointSize;
 #define ENABLE_BILLBOARD	(Billboard>0.5)
 			float DrawInvalidPositions;
-			float Debug_InvalidPositions;
+#define MIN_VALID_SCORE	0.01f
+
+			float Debug_EdgeScore;
+			float Debug_PositionScore;
 #define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5)
-#define DEBUG_INVALIDPOSITIONS	(Debug_InvalidPositions>0.5)
+#define DEBUG_EDGESCORE	(Debug_EdgeScore>0.5)
+#define DEBUG_POSITIONSCORE	(Debug_PositionScore>0.5)
 
 			float ClipToQuad;
 			#define CLIP_TO_QUAD	(ClipToQuad>0.5f)
@@ -80,18 +85,19 @@
 				//	position in camera space
 				float3 CameraPosition;
 				float2 ColourUv = float2(0,0);
-				float Validf = 0;
+				float EdgeScore = 0;
+				float PositionScore = 0;
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
 				float4 OverrideColour = float4(0,0,0,IS_SDF?1:0);
 
 				if ( IS_SDF )
-					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, Validf );
+					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, PositionScore );
 				else 
-					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, Validf);
+					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
 
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
-				bool Valid = Validf > 0.0f;
+				bool Valid = min(EdgeScore,PositionScore) > MIN_VALID_SCORE;
 
 				//	gr: here, do billboarding, and repalce below with UnityWorldToClipPos
 				v2f o;
@@ -100,12 +106,17 @@
 				o.TriangleUv = VertexUv;
 				o.OverrideColour = OverrideColour;
 				
-				if ( Validf < 1.0 && DEBUG_INVALIDPOSITIONS )
+				if ( DEBUG_EDGESCORE )
 				{
-					o.OverrideColour = float4(0, 1, 0, 1);
-					o.OverrideColour.xyz = NormalToRedGreen(Validf);
+					o.OverrideColour = float4(NormalToRedGreen(EdgeScore),1);
 				}
 
+				if ( DEBUG_POSITIONSCORE )
+				{
+					o.OverrideColour = float4(NormalToRedGreen(PositionScore),1);
+				}
+
+				//	degenerate invalid
 				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
 					o.vertex = float4(0, 0, 0, 0);
