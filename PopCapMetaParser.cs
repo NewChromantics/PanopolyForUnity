@@ -292,30 +292,39 @@ namespace PopCap
 		public bool Keyframe;   //	gr: this may be the requested keyframe state, so may not match NALU/IFrame status
 		public int LumaSize;
 
+
+		void FixStreamName()
+		{
+			if (string.IsNullOrEmpty(StreamName))
+			{
+				StreamName = Stream;
+			}
+			if (string.IsNullOrEmpty(StreamName))
+			{
+				Debug.LogWarning("Frame JSON with no streamname");
+			}
+		}
+
+		void FixProjectionMatrix()
+		{
+			if (Camera.ProjectionMatrix != null )
+			{
+				Debug.LogError("PopCapMeta has projection matrix. Todo: Convert to .camera");
+			}
+
+			//	always need a camera object
+			if (Camera == null)
+				Camera = new TCamera();
+		}
+
+
 		static public TFrameMeta Parse(string Json)
 		{
 			var This = JsonUtility.FromJson<PopCap.TFrameMeta>(Json);
 			//	backwards compatibility from old formats
-			if ( string.IsNullOrEmpty(This.StreamName) )
-			{
-				This.StreamName = This.Stream;
-			}
-			if (string.IsNullOrEmpty(This.StreamName))
-			{
-				Debug.LogWarning("Frame JSON with no streamname");
-			}
+			This.FixStreamName();
+			This.FixProjectionMatrix();
 			return This;
-		}
-
-		public Matrix4x4 GetCameraToLocal()
-		{
-			if (Camera == null)
-				return Matrix4x4.identity;
-
-			if (Camera.ProjectionMatrix == null)
-				return Matrix4x4.identity;
-
-			return Camera.GetCameraToLocal();
 		}
 
 		public int GetFrameTimeMs()

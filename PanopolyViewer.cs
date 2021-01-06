@@ -452,20 +452,17 @@ public class PanopolyViewer : MonoBehaviour
 		material.SetInt("Encoded_ChromaRangeCount", Meta.YuvEncodeParams.ChromaRangeCount);
 		material.SetInt("Encoded_LumaPingPong", Meta.YuvEncodeParams.PingPongLuma ? 1 : 0);
 		material.SetInt("PlaneCount", Planes.Count);
-		material.SetMatrix("CameraToLocalTransform", Meta.GetCameraToLocal());
-
-		if (Meta.Camera != null && Meta.Camera.IntrinsicsCameraResolution!=null)
+		
+		if (Meta.Camera != null )
 		{
+			material.SetMatrix("CameraToLocalTransform", Meta.Camera.GetCameraToLocal());
 			material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
 			material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
-		}
-		if (Meta.Camera != null)
-		{
 			material.SetMatrix("LocalToWorldTransform", Meta.Camera.GetLocalToWorld());
 		}
 		else
 		{
-			material.SetMatrix("LocalToWorldTransform", Matrix4x4.identity);
+			Debug.Log("Warning, popcap meta without camera");
 		}
 
 		for ( var i=0;	i<Mathf.Min(Planes.Count,PlaneUniforms.Count);	i++ )
