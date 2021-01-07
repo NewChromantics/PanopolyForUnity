@@ -10,6 +10,7 @@
 		[Toggle]DrawInvalidPositions("DrawInvalidPositions",Range(0,1)) = 0
 		[Toggle]Debug_EdgeScore("Debug_EdgeScore",Range(0,1))= 0
 		[Toggle]Debug_PositionScore("Debug_PositionScore",Range(0,1))= 0
+		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
@@ -62,9 +63,11 @@
 
 			float Debug_EdgeScore;
 			float Debug_PositionScore;
-#define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5)
+			float Debug_InvalidPositions;
+#define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5 || DEBUG_INVALIDPOSITIONS)
 #define DEBUG_EDGESCORE	(Debug_EdgeScore>0.5)
 #define DEBUG_POSITIONSCORE	(Debug_PositionScore>0.5)
+#define DEBUG_INVALIDPOSITIONS	(Debug_InvalidPositions>0.5)
 
 			float ClipToQuad;
 			#define CLIP_TO_QUAD	(ClipToQuad>0.5f)
@@ -105,18 +108,22 @@
                 o.SampleUv = ColourUv;
 				o.TriangleUv = VertexUv;
 				o.OverrideColour = OverrideColour;
-				
-				if ( DEBUG_EDGESCORE )
+
+				//	debug if invalid, or debug all 
+				if ( !Valid || !DEBUG_INVALIDPOSITIONS )
 				{
-					o.OverrideColour = float4(NormalToRedGreen(EdgeScore),1);
+					if ( DEBUG_EDGESCORE )
+					{
+						o.OverrideColour = float4(NormalToRedGreen(EdgeScore),1);
+					}
+
+					if ( DEBUG_POSITIONSCORE )
+					{
+						o.OverrideColour = float4(NormalToRedGreen(PositionScore),1);
+					}
 				}
 
-				if ( DEBUG_POSITIONSCORE )
-				{
-					o.OverrideColour = float4(NormalToRedGreen(PositionScore),1);
-				}
-
-				//	degenerate invalid
+				//	degenerate invalid 
 				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
 					o.vertex = float4(0, 0, 0, 0);

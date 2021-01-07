@@ -158,7 +158,7 @@
 
 					float Luma = GetLuma(Sampleuv);
 					float2 ChromaUV = GetChromaUv(Sampleuv);
-					Depth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams, ValidMinMetres);
+					Depth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams);
 
 					Score = 1.0;
 

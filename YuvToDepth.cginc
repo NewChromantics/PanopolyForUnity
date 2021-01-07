@@ -95,7 +95,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 //	convert YUV sampled values into local/camera depth
 //	multiply this, plus camera uv (so u,v,z,1) with a projection matrix to get world space position
-float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams,float ValidMinMetres)
+float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams)
 {
 	if ( DecodingParams.Debug_IgnoreMinor )
 		Luma = 0;
@@ -116,9 +116,6 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 	int ChromaV8 = ChromaV * 255;
 	uint16_t DepthMm = YuvToDepth(Luma8, ChromaU8, ChromaV8, Params);
 	float Depthm = DepthMm / 1000.0;
-
-	//	for kinect camera, catch zero's, need to standardise this (chromarange==0) 
-	//Valid = Depthm >= ValidMinMetres;
 
 	return DepthMm / 1000.0;
 }
