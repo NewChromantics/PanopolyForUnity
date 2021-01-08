@@ -54,8 +54,41 @@ uint32_t GetUvRangeWidthHeight(int32_t UvRangeCount)
 	return 10;
 }
 
+void GetChromaRangeIndex(out int Index,out float IndexNormalised,out float NextIndexNormalised,uint8_t ChromaU, uint8_t ChromaV, EncodeParams_t Params)
+{
+	//	work out from 0 to max this uv points at
+	int Width = GetUvRangeWidthHeight(Params.ChromaRangeCount);
+	int Height = Width;
+	int RangeMax = (Width*Height) - 1;
+
+	//	gr: emulate shader 
+	float ChromaUv_x = ChromaU / 255.f;
+	float ChromaUv_y = ChromaV / 255.f;
+
+	//	in the encoder, u=x%width and /width, so scales back up to -1  
+	float xf = ChromaUv_x * float(Width - 1);
+	float yf = ChromaUv_y * float(Height - 1);
+	//	we need the nearest, so we floor but go up a texel
+	int x = Floor(xf + 0.5);
+	int y = Floor(yf + 0.5);
+
+	//	gr: this should be nearest, not floor so add half
+	//ChromaUv = floor(ChromaUv + float2(0.5, 0.5) );
+	Index = x + (y*Width);
+
+	bool PingPong = (Index & 1) && Params.PingPongLuma;
+
+	IndexNormalised = (Index+0) / float(RangeMax);
+	NextIndexNormalised = (Index+1) / float(RangeMax);
+}
+
 uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams_t Params)
 {
+	int Index;
+	float IndexNormalised;
+	float NextNormalised;
+	GetChromaRangeIndex( Index, IndexNormalised, NextNormalised, ChromaU, ChromaV, Params );
+/*
 	//	work out from 0 to max this uv points at
 	int Width = GetUvRangeWidthHeight(Params.ChromaRangeCount);
 	int Height = Width;
@@ -76,15 +109,16 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	//ChromaUv = floor(ChromaUv + float2(0.5, 0.5) );
 	int Index = x + (y*Width);
 
-	bool PingPong = (Index & 1) && Params.PingPongLuma;
 
 	float Indexf = Index / float(RangeMax);
 	float Nextf = (Index + 1) / float(RangeMax);
 	//return float2(Indexf, Nextf);
+*/
+	bool PingPong = (Index & 1) && Params.PingPongLuma;
 
 	//	put into depth space
-	Indexf = Lerp(Params.DepthMin, Params.DepthMax, Indexf);
-	Nextf = Lerp(Params.DepthMin, Params.DepthMax, Nextf);
+	float Indexf = Lerp(Params.DepthMin, Params.DepthMax, IndexNormalised);
+	float Nextf = Lerp(Params.DepthMin, Params.DepthMax, NextNormalised);
 	float Lumaf = Luma / 255.0f;
 	Lumaf = PingPong ? (1.0-Lumaf) : Lumaf;
 	float Depth = Lerp(Indexf, Nextf, Lumaf);
