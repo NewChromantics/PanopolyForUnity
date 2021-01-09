@@ -1,4 +1,4 @@
-﻿Shader "Panopoly/YuvRangesToPosition"
+Shader "Panopoly/YuvRangesToPosition"
 {
 	Properties
 	{
@@ -235,7 +235,8 @@
 					//	if near enough to a neighbour, just score
 					if ( NearDist <= MaxEdgeDepth )
 					{
-						Score = 1;//1 - (NearDist / ScoreEdgeDepth);
+						Score = 1 - (NearDist / ScoreEdgeDepth);
+						Score = 2;
 					}
 					else // if best score is low, then snap to a neighbours depth
 					{
@@ -245,7 +246,7 @@
 						BestDepth = lerp( BestDepth, Right1, abs(Right1-Depth) < abs(BestDepth-Depth) );
 						BestDepth = lerp( BestDepth, Right2, abs(Right2-Depth) < abs(BestDepth-Depth) );
 						Depth = BestDepth;
-						Score = 1 - (NearDist / ScoreEdgeDepth);
+						Score = 1 - min(1,NearDist / ScoreEdgeDepth);
 					}
 
 					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
