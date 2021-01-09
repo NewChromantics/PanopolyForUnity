@@ -164,63 +164,60 @@
 				{
 					return ChromaUPlane_TexelSize * float2(xMult,yMult);
 				}
-				
+
+				float2 GetLumaUvAligned(float2 uv)
+				{
+					float2 Overflow = fmod(uv,LumaPlane_TexelSize);
+					return uv - Overflow;
+				}
+
+				float2 GetChromaUvAligned(float2 uv)
+				{
+					float2 Overflow = fmod(uv,ChromaUPlane_TexelSize);
+					return uv - Overflow;
+				}
+
+				float GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
+				{
+					//	remember to sample from middle of texel
+					//	gr: sampleuv will be wrong (not exact to texel) if output resolution doesnt match
+					//		may we can fix this in vert shader 
+					float2 LumaMidTexelOffset = GetLumaUvStep(0.5,0.5);
+					float2 ChromaMidTexelOffset = GetChromaUvStep(0.5,0.5);
+					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + LumaMidTexelOffset;
+					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + ChromaMidTexelOffset;
+					float Luma = GetLuma( SampleLumauv );
+					float2 ChromaUV = GetChromaUv( SampleChromauv );
+					float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
+					return Depth;
+				}
+
 				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
 				{
 					PopYuvDecodingParams DecodeParams;
 					DecodeParams.Debug_IgnoreMinor = Debug_IgnoreMinor > 0.5f;
 					DecodeParams.Debug_IgnoreMajor = Debug_IgnoreMajor > 0.5f;
 
+					Depth = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
 
-					float Luma = GetLuma(Sampleuv);
-					float2 ChromaUV = GetChromaUv(Sampleuv);
-					Depth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams);
+					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
+					float Left1 = GetNeighbourDepth(Sampleuv,float2(-1,0),EncodeParams,DecodeParams);
+					float Left2 = GetNeighbourDepth(Sampleuv,float2(-2,0),EncodeParams,DecodeParams);
+					float Right1 = GetNeighbourDepth(Sampleuv,float2(1,0),EncodeParams,DecodeParams);
+					float Right2 = GetNeighbourDepth(Sampleuv,float2(2,0),EncodeParams,DecodeParams);
 
-					float2 R_SampleLumauv = Sampleuv + GetLumaUvStep(1.0,0);
-					float2 R_SampleChromauv = Sampleuv + GetChromaUvStep(1.0,0);
-					float R_Luma = GetLuma(R_SampleLumauv);
-					float2 R_ChromaUV = GetChromaUv(R_SampleChromauv);
-					float R_Depth = GetCameraDepth(R_Luma, R_ChromaUV.x, R_ChromaUV.y, EncodeParams, DecodeParams);
+					//	figure out if our value is way off (chroma plane or luma value dont align)
+					float Diff_L1 = abs(Depth-Left1)/MaxEdgeDepth;
+					float Diff_L2 = abs(Depth-Left2)/MaxEdgeDepth;
+					float Diff_R1 = abs(Depth-Right1)/MaxEdgeDepth;
+					float Diff_R2 = abs(Depth-Right2)/MaxEdgeDepth;
 
-					bool LumaEdge = abs(Luma-R_Luma)>MaxLumaDiff;
-					bool ChromaEdge = length(ChromaUV.y-R_ChromaUV.y)>MaxChromaDiff;
+					float Score_L1 = 1 - min( 1, Diff_L1 );
+					float Score_L2 = 1 - min( 1, Diff_L2 );
+					float Score_R1 = 1 - min( 1, Diff_R1 );
+					float Score_R2 = 1 - min( 1, Diff_R2 );
 
-					//	gr: this is detecting good points next to a bad one, as well as a bad one next to a good one.
-					//	check more neighbours
-					bool IsEdge = abs(Depth - R_Depth) > MaxEdgeDepth;
-
-					Score = 1.0;
-
-					if ( IsEdge )
-					{
-						Score = 0.01;					
-
-/*
-						//	option A
-						//	check if neighbour is far away (like edge test)
-						//	if minor is close, use neighbour's major
-						//	if major is close, use neighbours minor
-						//	but, we need to make sure if this IS an edge, it sticks
-						//	use colour to determine if NOT an edge.
-						if ( LumaEdge && !ChromaEdge )
-						{
-							Score = 0.7;
-							Luma = R_Luma;
-							ChromaUV = R_ChromaUV;
-						}
-						else if ( !LumaEdge && ChromaEdge )
-						{
-							Score = 0.3;
-							Luma = R_Luma;
-							ChromaUV = R_ChromaUV;
-						}
-*/
-
-						//	todo: lerpy noise where both are wrong, is where we want to have influence map to drag to match left or right neighbour
-
-						//	refetch depth with new values 
-						Depth = GetCameraDepth(Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams);
-					}
+					Score = max(Score_L1,max(Score_L2,max(Score_R1,Score_R2)));
 
 					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
 					//	Popcap should standardise this to far-away  
