@@ -33,5 +33,5 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - Flip: 0
-    - PlaneCount: 2
+    - PlaneCount: 3
     m_Colors: []

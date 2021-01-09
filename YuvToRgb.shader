@@ -7,6 +7,9 @@
 		Plane3("Plane3", 2D) = "white" {}
 		[IntRange]PlaneCount("PlaneCount",Range(0,3)) = 3
 		[Toggle]Flip("Flip",Range(0,1)) =0
+
+		[IntRange]LumaMin("LumaMin",Range(0,255)) = 16
+		[IntRange]LumaMax("LumaMax",Range(0,255)) = 253
 	}
 	SubShader
 	{
@@ -46,6 +49,9 @@
 			float Flip;
 			#define FLIP	(Flip>0.5f)
 
+			float LumaMin;
+			float LumaMax;
+
 			v2f vert (appdata v)
 			{
 				v2f o;
@@ -59,6 +65,10 @@
 			fixed4 frag (v2f i) : SV_Target
 			{
 				YuvColourParams YuvParams = GetDefaultYuvColourParams();
+				YuvParams.LumaMin = LumaMin/255.0;
+				YuvParams.LumaMax = LumaMax/255.0;
+
+
 				float3 Rgb;
 				
 				if ( PlaneCount == 3 )
