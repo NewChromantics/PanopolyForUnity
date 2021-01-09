@@ -7,11 +7,16 @@
 		Plane3("Plane3", 2D) = "white" {}
 		[IntRange]PlaneCount("PlaneCount",Range(0,3)) = 3
 
+		DecodedLumaMin("DecodedLumaMin",Range(0,255) ) = 0
+		DecodedLumaMax("DecodedLumaMax",Range(0,255) ) = 255
+
 		[Header(Encoding Params from PopCap)]Encoded_DepthMinMetres("Encoded_DepthMinMetres",Range(0,30)) = 0
 		Encoded_DepthMaxMetres("Encoded_DepthMaxMetres",Range(0,30)) = 5
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
+		[Toggle]EnableDepthNoiseReduction("EnableDepthNoiseReduction",Range(0,1))=1
 		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,0.2))=0.02	//	see MaxWeldDistance
+		ScoreEdgeDepth("ScoreEdgeDepth",Range(0,0.2))=0.02
 		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
@@ -76,6 +81,9 @@
 				float Encoded_DepthMaxMetres;
 				bool Encoded_LumaPingPong;
 
+				float DecodedLumaMin;
+				float DecodedLumaMax;
+
 
 				//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
 				float3 CameraToLocalViewportMin;
@@ -99,6 +107,9 @@
 				float MaxEdgeDepth;
 				float MaxChromaDiff;
 				float MaxLumaDiff;
+				float ScoreEdgeDepth;
+				float EnableDepthNoiseReduction;
+	#define ENABLE_DEPTH_NOISE_REDUCTION	(EnableDepthNoiseReduction>0.5f)
 
 				float Debug_IgnoreMinor;
 				float Debug_IgnoreMajor;
@@ -182,10 +193,8 @@
 					//	remember to sample from middle of texel
 					//	gr: sampleuv will be wrong (not exact to texel) if output resolution doesnt match
 					//		may we can fix this in vert shader 
-					float2 LumaMidTexelOffset = GetLumaUvStep(0.5,0.5);
-					float2 ChromaMidTexelOffset = GetChromaUvStep(0.5,0.5);
-					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + LumaMidTexelOffset;
-					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + ChromaMidTexelOffset;
+					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetLumaUvStep(0.5,0.5);
+					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetChromaUvStep(0.5,0.5);
 					float Luma = GetLuma( SampleLumauv );
 					float2 ChromaUV = GetChromaUv( SampleChromauv );
 					float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
@@ -197,27 +206,47 @@
 					PopYuvDecodingParams DecodeParams;
 					DecodeParams.Debug_IgnoreMinor = Debug_IgnoreMinor > 0.5f;
 					DecodeParams.Debug_IgnoreMajor = Debug_IgnoreMajor > 0.5f;
+					DecodeParams.DecodedLumaMin = DecodedLumaMin;
+					DecodeParams.DecodedLumaMax = DecodedLumaMax;
 
 					Depth = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
+					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
+					{
+						Score = 1;
+						return;
+					}
 
 					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
 					float Left1 = GetNeighbourDepth(Sampleuv,float2(-1,0),EncodeParams,DecodeParams);
 					float Left2 = GetNeighbourDepth(Sampleuv,float2(-2,0),EncodeParams,DecodeParams);
 					float Right1 = GetNeighbourDepth(Sampleuv,float2(1,0),EncodeParams,DecodeParams);
-					float Right2 = GetNeighbourDepth(Sampleuv,float2(2,0),EncodeParams,DecodeParams);
+					float Right2 = GetNeighbourDepth(Sampleuv,float2(1,1),EncodeParams,DecodeParams);
 
 					//	figure out if our value is way off (chroma plane or luma value dont align)
-					float Diff_L1 = abs(Depth-Left1)/MaxEdgeDepth;
-					float Diff_L2 = abs(Depth-Left2)/MaxEdgeDepth;
-					float Diff_R1 = abs(Depth-Right1)/MaxEdgeDepth;
-					float Diff_R2 = abs(Depth-Right2)/MaxEdgeDepth;
+					float Diff_L1 = abs(Depth-Left1);
+					float Diff_L2 = abs(Depth-Left2);
+					float Diff_R1 = abs(Depth-Right1);
+					float Diff_R2 = abs(Depth-Right2);
 
-					float Score_L1 = 1 - min( 1, Diff_L1 );
-					float Score_L2 = 1 - min( 1, Diff_L2 );
-					float Score_R1 = 1 - min( 1, Diff_R1 );
-					float Score_R2 = 1 - min( 1, Diff_R2 );
 
-					Score = max(Score_L1,max(Score_L2,max(Score_R1,Score_R2)));
+					float FarDist = max(Diff_L1,max(Diff_L2,max(Diff_R1,Diff_R2)));
+					float NearDist = min(Diff_L1,min(Diff_L2,min(Diff_R1,Diff_R2)));
+
+					//	if near enough to a neighbour, just score
+					if ( NearDist <= MaxEdgeDepth )
+					{
+						Score = 1;//1 - (NearDist / ScoreEdgeDepth);
+					}
+					else // if best score is low, then snap to a neighbours depth
+					{
+						float BestDepth = Left1;
+						BestDepth = lerp( BestDepth, Left1, abs(Left1-Depth) < abs(BestDepth-Depth) );
+						BestDepth = lerp( BestDepth, Left2, abs(Left2-Depth) < abs(BestDepth-Depth) );
+						BestDepth = lerp( BestDepth, Right1, abs(Right1-Depth) < abs(BestDepth-Depth) );
+						BestDepth = lerp( BestDepth, Right2, abs(Right2-Depth) < abs(BestDepth-Depth) );
+						Depth = BestDepth;
+						Score = 1 - (NearDist / ScoreEdgeDepth);
+					}
 
 					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
 					//	Popcap should standardise this to far-away  

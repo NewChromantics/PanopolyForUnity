@@ -11,6 +11,8 @@ struct PopYuvDecodingParams
 {
 	bool Debug_IgnoreMinor;
 	bool Debug_IgnoreMajor;
+	float DecodedLumaMin;	//	byte
+	float DecodedLumaMax;	//	byte
 };
 
 //	C struct
@@ -127,6 +129,11 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	return Depth16;
 }
 
+float Range(float Min,float Max,float Value)
+{
+	return (Value-Min) / (Max-Min);
+}
+
 //	convert YUV sampled values into local/camera depth
 //	multiply this, plus camera uv (so u,v,z,1) with a projection matrix to get world space position
 float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingParams EncodingParams,PopYuvDecodingParams DecodingParams)
@@ -145,7 +152,8 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 	Params.DepthMax = EncodingParams.DepthMaxMetres * 1000;
 	Params.ChromaRangeCount = EncodingParams.ChromaRangeCount;
 	Params.PingPongLuma = EncodingParams.PingPongLuma;
-	int Luma8 = Luma * 255;
+	//	0..1 to 0..255 with adjustments for h264 range
+	int Luma8 = Range( DecodingParams.DecodedLumaMin, DecodingParams.DecodedLumaMax, Luma*255 ) * 255;	
 	int ChromaU8 = ChromaU * 255;
 	int ChromaV8 = ChromaV * 255;
 	uint16_t DepthMm = YuvToDepth(Luma8, ChromaU8, ChromaV8, Params);
