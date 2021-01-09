@@ -1,4 +1,4 @@
-Shader "Panopoly/YuvRangesToPosition"
+﻿Shader "Panopoly/YuvRangesToPosition"
 {
 	Properties
 	{
@@ -217,8 +217,10 @@ Shader "Panopoly/YuvRangesToPosition"
 					}
 
 					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
+					//	gr: we want to sample left & rught, (and in all directions, but planning for future scanline)
 					float Left1 = GetNeighbourDepth(Sampleuv,float2(-1,0),EncodeParams,DecodeParams);
-					float Left2 = GetNeighbourDepth(Sampleuv,float2(-2,0),EncodeParams,DecodeParams);
+					//	but also, lets match welding directions
+					float Left2 = GetNeighbourDepth(Sampleuv,float2(0,1),EncodeParams,DecodeParams);
 					float Right1 = GetNeighbourDepth(Sampleuv,float2(1,0),EncodeParams,DecodeParams);
 					float Right2 = GetNeighbourDepth(Sampleuv,float2(1,1),EncodeParams,DecodeParams);
 
