@@ -100,7 +100,12 @@
 					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
 
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
+				//	gr: if we count position scores, we include corrected ones, so invalid edges jump to 0,0,0
 				bool Valid = min(EdgeScore,PositionScore) > MIN_VALID_SCORE;
+				//bool Valid = EdgeScore > MIN_VALID_SCORE;
+
+				if ( !DRAW_INVALIDPOSITIONS )
+					Valid = EdgeScore > MIN_VALID_SCORE;
 
 				//	gr: here, do billboarding, and repalce below with UnityWorldToClipPos
 				v2f o;
