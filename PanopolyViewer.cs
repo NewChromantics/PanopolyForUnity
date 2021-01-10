@@ -85,12 +85,14 @@ namespace Panopoly
 					bool Decode = true;
 					try
 					{
+						/*
 						var NaluOffset = PopX.H264.GetNaluHeaderSize(Frame.Data);
 						var NaluType = PopX.H264.GetNaluType(Frame.Data[NaluOffset]);
 						if (NaluType == PopX.H264.NaluType.PFrame)
 						{
 							Decode = !KeyframesOnly;
 						}
+						*/
 					}
 					catch(System.Exception e)
 					{
