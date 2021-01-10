@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -58,6 +58,27 @@ namespace PopCap
 		public string Tracking;                 //	state
 		public string TrackingStateReason;
 		public bool ARWorldAlignmentGravity { get { return true; } } //	gr: currently always set to ARWorldAlignmentGravity
+
+		public Matrix4x4 ProjectionMatrix4x4
+		{
+			get
+			{
+				if (ProjectionMatrix == null || ProjectionMatrix.Length != 4 * 4)
+					throw new System.Exception("requested ProjectionMatrix4x4, but no projection matrix");
+
+				var Row0 = new Vector4(ProjectionMatrix[0], ProjectionMatrix[1], ProjectionMatrix[2], ProjectionMatrix[3]);
+				var Row1 = new Vector4(ProjectionMatrix[4], ProjectionMatrix[5], ProjectionMatrix[6], ProjectionMatrix[7]);
+				var Row2 = new Vector4(ProjectionMatrix[8], ProjectionMatrix[9], ProjectionMatrix[10], ProjectionMatrix[11]);
+				var Row3 = new Vector4(ProjectionMatrix[12], ProjectionMatrix[13], ProjectionMatrix[14], ProjectionMatrix[15]);
+
+				var Transform = new Matrix4x4();
+				Transform.SetColumn(0, Row0);
+				Transform.SetColumn(1, Row1);
+				Transform.SetColumn(2, Row2);
+				Transform.SetColumn(3, Row3);
+				return Transform;
+			}
+		}
 
 		public Vector3 GetCameraSpaceViewportMin()
 		{
@@ -211,7 +232,17 @@ namespace PopCap
 			CameraToLocal.SetRow(1, CameraToLocalRow1);
 			CameraToLocal.SetRow(2, CameraToLocalRow2);
 			CameraToLocal.SetRow(3, CameraToLocalRow3);
-			
+			/*
+			if (this.ProjectionMatrix != null && this.ProjectionMatrix.Length > 0)
+			{
+				var p = ProjectionMatrix4x4.inverse;
+				//if (ProjectionMatrix != null && ProjectionMatrix.Length == 4 * 4)
+				//	return ProjectionMatrix4x4.inverse;
+				//Debug.Log("Use projection matrix");
+				return p;
+			}
+			*/
+
 			return CameraToLocal;
 			/*	this is how it's used
 			float4 CameraPosition4;
@@ -228,8 +259,16 @@ namespace PopCap
 		//	projection matrix inverse, convert image-space (0..w, not 0..1) coordinates
 		public Matrix4x4 GetLocalToCamera()
 		{
-			var LocalToCamera = GetCameraToLocal();
-			return LocalToCamera.inverse;
+			/*
+			if (this.ProjectionMatrix != null && this.ProjectionMatrix.Length > 0)
+			{
+				//Debug.Log("Use projection matrix");
+				return this.ProjectionMatrix4x4;
+			}
+			*/
+			var CameraToLocal = GetCameraToLocal();
+			var LocalToCamera = CameraToLocal.inverse;
+			return LocalToCamera;
 		}
 	};
 
@@ -307,11 +346,6 @@ namespace PopCap
 
 		void FixProjectionMatrix()
 		{
-			if (Camera.ProjectionMatrix != null )
-			{
-				Debug.LogError("PopCapMeta has projection matrix. Todo: Convert to .camera");
-			}
-
 			//	always need a camera object
 			if (Camera == null)
 				Camera = new TCamera();
