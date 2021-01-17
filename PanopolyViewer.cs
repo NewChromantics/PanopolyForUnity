@@ -155,7 +155,6 @@ namespace Panopoly
 					return PrevFrame;
 				}
 				NewFrame.FrameNumber = NewFrameNumberMaybe.Value;
-				Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrame.FrameNumber))
 				{
 					NewFrame.Meta = FrameMetas[NewFrame.FrameNumber];
@@ -164,6 +163,7 @@ namespace Panopoly
 				{
 					Debug("Missing meta for new frame " + NewFrame.FrameNumber);
 				}
+				Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + " time=" + NewFrame.Meta.GetFrameTimeMs() + " (last sent=" + (FrameCounter - 1) + " )");
 
 				//	set this as next frame and loop around
 				NextDecodedFrame = NewFrame;
@@ -333,6 +333,8 @@ public class PanopolyViewer : MonoBehaviour
 	void UpdateDecode()
 	{
 		var DecodeTime = this.TimeMs + DecodeAheadMs;
+		if (VerboseDebug)
+			Debug.Log("Decoding frame to time: " + DecodeTime);
 		foreach (KeyValuePair<string, TStream> NameAndStream in Streams)
 		{
 			var StreamName = NameAndStream.Key;
@@ -366,8 +368,10 @@ public class PanopolyViewer : MonoBehaviour
 		//	get latest frames from each stream
 		//	gr: try and keep these in sync, UpdateClock() should do it, it should figure out the sync'd frame we should be displaying
 		var FrameTime = this.TimeMs;
-		if ( VerboseDebug )
-			Debug.Log("Decoding to time: " + FrameTime);
+		if (VerboseDebug)
+		{
+			//Debug.Log("Reading frame to time: " + FrameTime);
+		}
 		TDecodedFrame? DepthFrame = null;
 		TDecodedFrame? ColourFrame = null;
 
@@ -399,6 +403,8 @@ public class PanopolyViewer : MonoBehaviour
 
 		if (DepthFrame.HasValue && ColourFrame.HasValue)
 		{
+			if ( VerboseDebug )
+				Debug.Log("Blit colour & depth frame time=" + FrameTime + " colour = " + ColourFrame.Value.Meta.GetFrameTimeMs() + " depth=" + DepthFrame.Value.Meta.GetFrameTimeMs() );
 			OnFrame.Invoke(ColourFrame.Value.Meta, ColourBlitTarget, DepthFrame.Value.Meta, DepthBlitTarget);
 		}
 		/*
