@@ -166,12 +166,12 @@
 					return float2(ChromaU,ChromaV);
 				}
 
-				float2 GetLumaUvStep(float xMult=1,float yMult=1)
+				float2 GetLumaUvStep(float xMult,float yMult)
 				{
 					return LumaPlane_TexelSize * float2(xMult,yMult);
 				}
 				
-				float2 GetChromaUvStep(float xMult=1,float yMult=1)
+				float2 GetChromaUvStep(float xMult,float yMult)
 				{
 					return ChromaUPlane_TexelSize * float2(xMult,yMult);
 				}
@@ -192,7 +192,7 @@
 				{
 					//	remember to sample from middle of texel
 					//	gr: sampleuv will be wrong (not exact to texel) if output resolution doesnt match
-					//		may we can fix this in vert shader 
+					//		may we can fix this in vert shader  
 					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetLumaUvStep(0.5,0.5);
 					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetChromaUvStep(0.5,0.5);
 					float Luma = GetLuma( SampleLumauv );
