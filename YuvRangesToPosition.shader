@@ -249,39 +249,54 @@
 					//		maybe our chroma sample shouldn't be pixel left & right inside GetNeighbourDepth
 					//		but we definitely need to sample a bit further than 1 pixel... in this case
 					float SampleStep = NeighbourSamplePixelStep;
-					float2 SampleOffsets[4];
-					SampleOffsets[0] = float2(-1,-1) * SampleStep;
-					SampleOffsets[1] = float2(-2,1) * SampleStep;
-					SampleOffsets[2] = float2(1,-1) * SampleStep;
-					SampleOffsets[3] = float2(2,1) * SampleStep;
-
-					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
+					#define NEIGHBOUR_COUNT	8
+					float2 SampleOffsets[NEIGHBOUR_COUNT];
 					//	gr: we want to sample left & rught, (and in all directions, but planning for future scanline)
-					float2 Left1 = GetNeighbourDepth(Sampleuv,SampleOffsets[0],EncodeParams,DecodeParams);
 					//	but also, lets match welding directions
-					float2 Left2 = GetNeighbourDepth(Sampleuv,SampleOffsets[1],EncodeParams,DecodeParams);
-					float2 Right1 = GetNeighbourDepth(Sampleuv,SampleOffsets[2],EncodeParams,DecodeParams);
-					float2 Right2 = GetNeighbourDepth(Sampleuv,SampleOffsets[3],EncodeParams,DecodeParams);
+					SampleOffsets[0] = float2(-1,0) * SampleStep;
+					SampleOffsets[1] = float2(-1,-1) * SampleStep;
+					SampleOffsets[2] = float2(0,-1) * SampleStep;
+					SampleOffsets[3] = float2(1,-1) * SampleStep;
+					SampleOffsets[4] = float2(1,0) * SampleStep;
+					SampleOffsets[5] = float2(1,1) * SampleStep;
+					SampleOffsets[6] = float2(0,1) * SampleStep;
+					SampleOffsets[7] = float2(-1,1) * SampleStep;
+#if NEIGHBOUR_COUNT > 8
+					SampleOffsets[8] = float2(-2,0) * SampleStep;
+					SampleOffsets[9] = float2(-2,-2) * SampleStep;
+					SampleOffsets[10] = float2(0,-2) * SampleStep;
+					SampleOffsets[11] = float2(2,-2) * SampleStep;
+					SampleOffsets[12] = float2(2,0) * SampleStep;
+					SampleOffsets[13] = float2(2,2) * SampleStep;
+					SampleOffsets[14] = float2(0,2) * SampleStep;
+					SampleOffsets[15] = float2(-2,2) * SampleStep;
+#endif
 
-					//	figure out if our value is way off (chroma plane or luma value dont align)
-					float Diff_L1 = abs(Depth-Left1.x) * lerp( 999, 1, Left1.y );
-					float Diff_L2 = abs(Depth-Left2.x) * lerp( 999, 1, Left2.y );
-					float Diff_R1 = abs(Depth-Right1.x) * lerp( 999, 1, Right1.y );
-					float Diff_R2 = abs(Depth-Right2.x) * lerp( 999, 1, Right2.y );
-
-
-					float FarDist = max(Diff_L1,max(Diff_L2,max(Diff_R1,Diff_R2)));
-					float NearDist = min(Diff_L1,min(Diff_L2,min(Diff_R1,Diff_R2)));
+					float2 SampleDepths[NEIGHBOUR_COUNT];
+					float SampleDiffs[NEIGHBOUR_COUNT];
+					float FarDist = 0;
+					float NearDist = 9999;
+					for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
+					{
+						float2 SampleDepth = GetNeighbourDepth(Sampleuv,SampleOffsets[s],EncodeParams,DecodeParams);
+						SampleDepths[s] = SampleDepth;
+						//	gr: make the diff massive so it's not used 
+						float SampleDiff = abs(Depth-SampleDepth.x) * lerp( 999, 1, SampleDepth.y );
+						SampleDiffs[s] = SampleDiff;
+						FarDist = max( FarDist, SampleDiff );
+						NearDist = min( NearDist, SampleDiff );
+					}
 
 					//	origin sample is invalid, (ie black pixel, not noisy) we need to pick any good sample
 					//	todo: this is where we would find a nearby pixel of the same COLOUR and pick that
 					if ( OriginDepthValid.y < 1.0 )
 					{
 						float2 Result = OriginDepthValid;
-						Result = lerp( Result, Left1, (Left1.y > Result.y) ? 1 : 0 );
-						Result = lerp( Result, Left2, (Left2.y > Result.y) ? 1 : 0 );
-						Result = lerp( Result, Right1, (Right1.y > Result.y) ? 1 : 0 );
-						Result = lerp( Result, Right2, (Right2.y > Result.y) ? 1 : 0 );
+						for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
+						{
+							float2 SampleDepth = SampleDepths[s];
+							Result = lerp( Result, SampleDepth, (SampleDepth.y > Result.y) ? 1 : 0 );
+						}
 						Depth = Result.x;
 						Score = (Result.y > 0.0) ? 0.5 : -1;
 						return;
@@ -290,22 +305,21 @@
 					{
 						//Score = Range( MaxEdgeDepth, 0.0, NearDist );
 						//Score += 1.001;
-Score = 2;
+						Score = 2;
 					}
 					else // if best score is low, then snap to a neighbours depth
 					if ( NearDist <= MaxCorrectedEdgeDepth )
 					{
-						float BestDepth = Left1;
-/*
-						BestDepth = lerp( BestDepth, Left1, abs(Left1-Depth) < abs(BestDepth-Depth) );
-						BestDepth = lerp( BestDepth, Left2, abs(Left2-Depth) < abs(BestDepth-Depth) );
-						BestDepth = lerp( BestDepth, Right1, abs(Right1-Depth) < abs(BestDepth-Depth) );
-						BestDepth = lerp( BestDepth, Right2, abs(Right2-Depth) < abs(BestDepth-Depth) );
-*/
+						float BestDepth = SampleDepths[0].x;
+						for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
+						{
+							float2 SampleDepth = SampleDepths[s];
+							BestDepth = lerp( BestDepth, SampleDepth, abs(SampleDepth-Depth) < abs(BestDepth-Depth) );
+						}
 						Depth = BestDepth;
 
 						Score = Range( MaxEdgeDepth, MaxCorrectedEdgeDepth, NearDist );
-Score = 1.0;
+						Score = 1.0;
 					}
 					else
 					{
