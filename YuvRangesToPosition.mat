@@ -10,6 +10,7 @@ Material:
   m_Name: YuvRangesToPosition
   m_Shader: {fileID: 4800000, guid: 25f8313c71d64284d8f339711255eb09, type: 3}
   m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENABLEDEPTHNOISEREDUCTION_ON ENCODED_LUMAPINGPONG_ON
+    FLIPOUTPUT_ON FLIPSAMPLE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -53,22 +54,22 @@ Material:
     - DecodedLumaMax: 247
     - DecodedLumaMin: 5
     - EnableDepthNoiseReduction: 1
-    - Encoded_ChromaRangeCount: 36
+    - Encoded_ChromaRangeCount: 10
     - Encoded_DepthMaxMetres: 5
     - Encoded_DepthMinMetres: 0
     - Encoded_DepthRanges: 1
     - Encoded_LumaPingPong: 0
     - Flip: 0
-    - FlipOutput: 0
-    - FlipSample: 0
+    - FlipOutput: 1
+    - FlipSample: 1
     - MaxChromaDiff: 0
-    - MaxEdgeDepth: 0.0066
+    - MaxEdgeDepth: 0.029
     - MaxLumaDiff: 0
     - MinDontMoveScore: 0.899
-    - PlaneCount: 3
-    - ScoreEdgeDepth: 0.014
-    - ValidMinMetres: 0
+    - PlaneCount: 2
+    - ScoreEdgeDepth: 0.072
+    - ValidMinMetres: 0.115
     - _Angle: 0
     m_Colors:
-    - CameraToLocalViewportMax: {r: 500, g: 500, b: 1000, a: 0}
+    - CameraToLocalViewportMax: {r: 1280, g: 720, b: 1000, a: 0}
     - CameraToLocalViewportMin: {r: 0, g: 0, b: 0, a: 0}
