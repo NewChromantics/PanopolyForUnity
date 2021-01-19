@@ -54,8 +54,8 @@
 			SamplerState sampler_CloudPositions;
 
 			sampler2D CloudColours;
-			float4 CloudPositions_texelSize;
-			float4 CloudColours_texelSize;
+			float4 CloudPositions_TexelSize;
+			float4 CloudColours_TexelSize;
 			float Billboard;
 			float PointSize;
 #define ENABLE_BILLBOARD	(Billboard>0.5)
@@ -96,11 +96,12 @@
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
 				float4 OverrideColour = float4(0,0,0,IS_SDF?1:0);
+				float2 PositionsTexelSize = CloudPositions_TexelSize;
 
 				if ( IS_SDF )
 					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, PositionScore );
 				else 
-					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
+					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, PositionsTexelSize, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
 
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
 				//	gr: if we count position scores, we include corrected ones, so invalid edges jump to 0,0,0

@@ -1,7 +1,7 @@
-/*
+﻿/*
 float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Valid)
 {
-	float MapWidth = 640;// CloudPositions_texelSize.z;
+	float MapWidth = 640;// CloudPositions_TexelSize.z;
 	float u = fmod(TriangleIndex, MapWidth) / MapWidth;
 	float v = floor(TriangleIndex / MapWidth) / MapWidth;
 
@@ -19,10 +19,8 @@ float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Va
 //	1 = no distance
 //	0 = too far
 //	<0 = has invalid neighbour, do not join 
-float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
+float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionsTexelSize,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
 {
-	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
-
 	float2 LeftUv = PositionMapUv;
 	float2 RightUv = PositionMapUv + float2(PositionsTexelSize.x,0);
 	float2 UpUv = PositionMapUv + float2(0,PositionsTexelSize.y);
@@ -57,7 +55,7 @@ float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 //	because of missing reference to 
 //		Vertex_uv_TriangleIndex_To_CloudUvs_float 
 #define Vertex_uv_TriangleIndex_To_CloudUvs	Vertex_uv_TriangleIndex_To_CloudUvs_float
-void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float PositionScore,out float EdgeScore)
+void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionsTexelSize,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float PositionScore,out float JoinScore)
 {
 	float u = PointMapUv.x;
 	float v = PointMapUv.y;
@@ -71,17 +69,18 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	//	sample from middle of texels to avoid odd samples (or bilinear accidents)
 	//	gr: get proper size! 
 	float4 PositionUv = float4(u, v, 0, 0);
-	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
-	PositionUv.xy += PositionsTexelSize * 0.5f;
+	PositionUv.xy += PositionsTexelSize * float2(0.5,0.5);
 
-	EdgeScore = GetJoinScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
-	bool IsEdge = EdgeScore <= 0.0;
+	JoinScore = GetJoinScore(Positions, PositionsSampler, PositionsTexelSize, PositionUv, VertexUv, MaxWeldDistance );
+	bool IsEdge = JoinScore <= 0.0;
+
+	bool Welding = WeldToNeighbour && !IsEdge;
 
 	//	if welding, move our vertex to the next position
-	if ( WeldToNeighbour )
+	if ( Welding )
 	{
 		//	degenerate if edge
-		PositionUv.xy += PositionsTexelSize * VertexUv * (IsEdge?0:1);	
+		PositionUv.xy += PositionsTexelSize * VertexUv;	
 	}
 
 	//float4 PositionSample = tex2Dlod(Positions, PositionUv);
@@ -92,7 +91,7 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float3 CameraPosition = PositionSample.xyz;
 
 	//	local space offset of the triangle
-	float3 VertexPosition = float3(VertexUv, 0) * ((WeldToNeighbour&&!IsEdge) ? 0 : PointSize);
+	float3 VertexPosition = float3(VertexUv, 0) * (Welding ? 0.0 : PointSize);
 	CameraPosition += VertexPosition;
 	
 	//return CameraPosition.xyz;
