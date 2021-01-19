@@ -134,10 +134,10 @@
 					}
 				}
 
-				//	degenerate invalid 
+				//	degenerate invalid   
 				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
-					//o.vertex = float4(0, 0, 0, 0);
+					o.vertex = float4(0, 0, 0, 0);
 				}
 				
                 return o;
