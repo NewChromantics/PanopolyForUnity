@@ -16,7 +16,6 @@
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]EnableDepthNoiseReduction("EnableDepthNoiseReduction",Range(0,1))=1
 		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,0.2))=0.02	//	see MaxWeldDistance
-		ScoreEdgeDepth("ScoreEdgeDepth",Range(0,0.2))=0.02
 		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
@@ -107,7 +106,6 @@
 				float MaxEdgeDepth;
 				float MaxChromaDiff;
 				float MaxLumaDiff;
-				float ScoreEdgeDepth;
 				float EnableDepthNoiseReduction;
 	#define ENABLE_DEPTH_NOISE_REDUCTION	(EnableDepthNoiseReduction>0.5f)
 
@@ -234,11 +232,11 @@
 					float FarDist = max(Diff_L1,max(Diff_L2,max(Diff_R1,Diff_R2)));
 					float NearDist = min(Diff_L1,min(Diff_L2,min(Diff_R1,Diff_R2)));
 
-					//	if near enough to a neighbour, just score
+					//	if near enough to a neighbour, just score    
 					if ( NearDist <= MaxEdgeDepth )
 					{
-						Score = 1 - (NearDist / ScoreEdgeDepth);
-						Score = 2;
+						Score = 1 - (NearDist / MaxEdgeDepth);
+						//Score = 2;
 					}
 					else // if best score is low, then snap to a neighbours depth
 					{
@@ -248,7 +246,7 @@
 						BestDepth = lerp( BestDepth, Right1, abs(Right1-Depth) < abs(BestDepth-Depth) );
 						BestDepth = lerp( BestDepth, Right2, abs(Right2-Depth) < abs(BestDepth-Depth) );
 						Depth = BestDepth;
-						Score = 1 - min(1,NearDist / ScoreEdgeDepth);
+						Score = 1 - (NearDist / MaxEdgeDepth);
 					}
 
 					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
