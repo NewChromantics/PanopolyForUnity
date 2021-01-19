@@ -1,4 +1,4 @@
-﻿/*
+/*
 float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Valid)
 {
 	float MapWidth = 640;// CloudPositions_texelSize.z;
@@ -15,8 +15,11 @@ float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Va
 
 
 
-//	dont weld to edge
-float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
+//	how much do we have to stretch to a neighbour
+//	1 = no distance
+//	0 = too far
+//	<0 = has invalid neighbour, do not join 
+float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionMapUv,float2 VertexUv,float MaxWeldDistance)
 {
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 
@@ -31,6 +34,10 @@ float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 	float4 UpSample = Positions.SampleLevel( PositionsSampler, UpUv, SampleMip );	
 	float4 OppSample = Positions.SampleLevel( PositionsSampler, OppUv, SampleMip );	
 
+	float WorstNeighbourScore = min( LeftSample.w, min( RightSample.w, min( UpSample.w, OppSample.w ) ) );
+	if ( WorstNeighbourScore <= 0.0 )
+		return -1.0;
+
 	float RightDistance = distance(LeftSample.xyz,RightSample.xyz);
 	float UpDistance = distance(LeftSample.xyz,UpSample.xyz);
 	float OppDistance = distance(LeftSample.xyz,OppSample.xyz);
@@ -38,11 +45,11 @@ float GetEdgeScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 	float BigDistance = RightDistance;
 	BigDistance = max( BigDistance, UpDistance);
 	BigDistance = max( BigDistance, OppDistance);
-
 	
 
 	float Distance = BigDistance;
-	return Distance / MaxWeldDistance;
+	float DistanceScore = min( 1.0, Distance / MaxWeldDistance );
+	return 1.0 - DistanceScore;
 }
 
 //	gr: shadergraph fails looking for
@@ -67,7 +74,7 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float2 PositionsTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
 	PositionUv.xy += PositionsTexelSize * 0.5f;
 
-	EdgeScore = 1 - GetEdgeScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
+	EdgeScore = GetJoinScore(Positions, PositionsSampler, PositionUv, VertexUv, MaxWeldDistance );
 	bool IsEdge = EdgeScore <= 0.0;
 
 	//	if welding, move our vertex to the next position

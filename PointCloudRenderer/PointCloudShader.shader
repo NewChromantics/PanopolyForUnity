@@ -11,10 +11,11 @@
 		[Toggle]Debug_EdgeScore("Debug_EdgeScore",Range(0,1))= 0
 		[Toggle]Debug_PositionScore("Debug_PositionScore",Range(0,1))= 0
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
+		[Toggle]Debug_AlwaysValid("Debug_AlwaysValid",Range(0,1))=0
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
-		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.1))=0.02
+		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.5))=0.02
         
         MaxSdfDistance("MaxSdfDistance",Range(0,0.2))=1
         RenderSdfMinScore("RenderSdfMinScore",Range(0,1))=1
@@ -64,6 +65,8 @@
 			float Debug_EdgeScore;
 			float Debug_PositionScore;
 			float Debug_InvalidPositions;
+			float Debug_AlwaysValid;
+#define DEBUG_ALWAYSVALID	(Debug_AlwaysValid>0.5)
 #define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5 || DEBUG_INVALIDPOSITIONS)
 #define DEBUG_EDGESCORE	(Debug_EdgeScore>0.5)
 #define DEBUG_POSITIONSCORE	(Debug_PositionScore>0.5)
@@ -102,7 +105,10 @@
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
 				//	gr: if we count position scores, we include corrected ones, so invalid edges jump to 0,0,0
 				//bool Valid = min(EdgeScore,PositionScore) > MIN_VALID_SCORE;  
-				bool Valid = EdgeScore > MIN_VALID_SCORE;
+				bool Valid = EdgeScore > 0.0;//MIN_VALID_SCORE;
+				//bool Valid = PositionScore > 0.0;
+
+				//Valid = Valid || DEBUG_ALWAYSVALID;
 
 				//if ( !DRAW_INVALIDPOSITIONS )
 				//	Valid = EdgeScore > MIN_VALID_SCORE;
@@ -131,7 +137,7 @@
 				//	degenerate invalid 
 				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
-					o.vertex = float4(0, 0, 0, 0);
+					//o.vertex = float4(0, 0, 0, 0);
 				}
 				
                 return o;
