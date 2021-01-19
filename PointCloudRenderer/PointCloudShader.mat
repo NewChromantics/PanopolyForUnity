@@ -9,8 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: PointCloudShader
   m_Shader: {fileID: 4800000, guid: d40bdbe7d4ce43146a2ca0c88162e587, type: 3}
-  m_ShaderKeywords: CLIPTOQUAD_ON DEBUG_COLOURSSTRIPED_ON DEBUG_EDGESCORE_ON DEBUG_INVALIDPOSITIONS_ON
-    DEBUG_POSITIONSCORE_ON WELDTONEIGHBOUR_ON
+  m_ShaderKeywords: CLIPTOQUAD_ON DEBUG_COLOURSSTRIPED_ON WELDTONEIGHBOUR_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -35,9 +34,9 @@ Material:
     - CloudPositionsAreSdf: 0
     - Debug_AlwaysValid: 0
     - Debug_ColoursStriped: 1
-    - Debug_EdgeScore: 1
-    - Debug_InvalidPositions: 1
-    - Debug_PositionScore: 1
+    - Debug_EdgeScore: 0
+    - Debug_InvalidPositions: 0
+    - Debug_PositionScore: 0
     - DrawInvalidPositions: 0
     - MaxSdfDistance: 1
     - MaxWeldDistance: 0.025
