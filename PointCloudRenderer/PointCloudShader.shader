@@ -15,7 +15,8 @@
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
-		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.1))=0.02
+		MaxWeldDistance_Near("MaxWeldDistance_Near",Range(0.0001,0.2))=0.02
+		MaxWeldDistance_Far("MaxWeldDistance_Far",Range(0.0001,0.2))=0.02
         
         MaxSdfDistance("MaxSdfDistance",Range(0,0.2))=1
         RenderSdfMinScore("RenderSdfMinScore",Range(0,1))=1
@@ -79,7 +80,8 @@
 
 			float WeldToNeighbour;
 			#define WELD_TO_NEIGHBOUR	(WeldToNeighbour>0.5f)
-			float MaxWeldDistance;
+			float MaxWeldDistance_Near;
+			float MaxWeldDistance_Far;
             
             
 			float CloudPositionsAreSdf;
@@ -101,7 +103,7 @@
 				if ( IS_SDF )
 					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, PositionScore );
 				else 
-					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, PositionsTexelSize, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
+					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, PositionsTexelSize, VertexUv, PointMapUv, PointSize, MaxWeldDistance_Near, MaxWeldDistance_Far, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
 
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
 				//	gr: if we count position scores, we include corrected ones, so invalid edges jump to 0,0,0

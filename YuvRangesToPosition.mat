@@ -47,12 +47,16 @@ Material:
     m_Floats:
     - ApplyLocalToWorld: 1
     - Debug_Depth: 0
+    - Debug_DepthAsValid: 0
+    - Debug_DepthMaxMetres: 1.52
+    - Debug_DepthMinMetres: 1.3
     - Debug_IgnoreMajor: 0
     - Debug_IgnoreMinor: 0
     - Debug_MajorAsValid: 0
     - Debug_MinorAsValid: 0
-    - DecodedLumaMax: 247
-    - DecodedLumaMin: 5
+    - Debug_PlaceInvalidDepth: 0
+    - DecodedLumaMax: 217
+    - DecodedLumaMin: 2
     - EnableDepthNoiseReduction: 1
     - Encoded_ChromaRangeCount: 10
     - Encoded_DepthMaxMetres: 5
@@ -63,12 +67,14 @@ Material:
     - FlipOutput: 1
     - FlipSample: 1
     - MaxChromaDiff: 0
-    - MaxEdgeDepth: 0.029
+    - MaxCorrectedEdgeDepth: 1
+    - MaxEdgeDepth: 0.12
     - MaxLumaDiff: 0
     - MinDontMoveScore: 0.899
-    - PlaneCount: 2
+    - NeighbourSamplePixelStep: 1
+    - PlaneCount: 3
     - ScoreEdgeDepth: 0.072
-    - ValidMinMetres: 0.115
+    - ValidMinMetres: 0.37
     - _Angle: 0
     m_Colors:
     - CameraToLocalViewportMax: {r: 1280, g: 720, b: 1000, a: 0}

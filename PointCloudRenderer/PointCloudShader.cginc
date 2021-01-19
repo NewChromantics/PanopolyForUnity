@@ -13,7 +13,15 @@ float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Va
 }
 */
 
+float Range(float Min,float Max,float Value)
+{
+	return (Value-Min) / (Max-Min);
+}
 
+float Range01(float Min,float Max,float Value)
+{
+	return clamp( Range(Min,Max,Value), 0.0, 1.0 );
+}
 
 //	how much do we have to stretch to a neighbour
 //	1 = no distance
@@ -39,7 +47,7 @@ float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 	float RightDistance = distance(LeftSample.xyz,RightSample.xyz);
 	float UpDistance = distance(LeftSample.xyz,UpSample.xyz);
 	float OppDistance = distance(LeftSample.xyz,OppSample.xyz);
-
+	
 	float BigDistance = RightDistance;
 	BigDistance = max( BigDistance, UpDistance);
 	BigDistance = max( BigDistance, OppDistance);
@@ -55,7 +63,7 @@ float GetJoinScore(Texture2D<float4> Positions,SamplerState PositionsSampler,flo
 //	because of missing reference to 
 //		Vertex_uv_TriangleIndex_To_CloudUvs_float 
 #define Vertex_uv_TriangleIndex_To_CloudUvs	Vertex_uv_TriangleIndex_To_CloudUvs_float
-void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionsTexelSize,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float PositionScore,out float JoinScore)
+void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,SamplerState PositionsSampler,float2 PositionsTexelSize,float2 VertexUv,float2 PointMapUv,float PointSize,float MaxWeldDistance_Near,float MaxWeldDistance_Far,bool WeldToNeighbour,out float3 Position,out float2 ColourUv,out float PositionScore,out float JoinScore)
 {
 	float u = PointMapUv.x;
 	float v = PointMapUv.y;
@@ -70,6 +78,14 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	//	gr: get proper size! 
 	float4 PositionUv = float4(u, v, 0, 0);
 	PositionUv.xy += PositionsTexelSize * float2(0.5,0.5);
+
+	//	vary weld distance based on depth, as depth isn't linear, the gaps between samples aren't either
+	//	gr: probably shouldnt be doing a linear scalar in that case... but just first pass for now
+	float MaxFarDistance = 3;
+	float MaxNearDistance = 0.5;
+	float LocalDistance = distance(PositionUv.xyz,float3(0,0,0));
+	LocalDistance = Range01( MaxNearDistance, MaxFarDistance, LocalDistance );
+	float MaxWeldDistance = lerp( MaxWeldDistance_Near, MaxWeldDistance_Far, LocalDistance );
 
 	JoinScore = GetJoinScore(Positions, PositionsSampler, PositionsTexelSize, PositionUv, VertexUv, MaxWeldDistance );
 	bool IsEdge = JoinScore <= 0.0;
