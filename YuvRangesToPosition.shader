@@ -15,7 +15,9 @@
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]EnableDepthNoiseReduction("EnableDepthNoiseReduction",Range(0,1))=1
-		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,0.2))=0.02	//	see MaxWeldDistance
+		[IntRange]NeighbourSamplePixelStep("NeighbourSamplePixelStep",Range(1,10)) = 4
+		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
+		MaxCorrectedEdgeDepth("MaxCorrectedEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
 		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
@@ -26,6 +28,10 @@
 		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
 		[Toggle]Debug_MinorAsValid("Debug_MinorAsValid",Range(0,1))=0
 		[Toggle]Debug_MajorAsValid("Debug_MajorAsValid",Range(0,1))=0
+		[Toggle]Debug_DepthAsValid("Debug_DepthAsValid",Range(0,1)) =0
+		[Toggle]Debug_PlaceInvalidDepth("Debug_PlaceInvalidDepth",Range(0,1))=0
+		Debug_DepthMinMetres("Debug_DepthMinMetres",Range(0,5)) = 0
+		Debug_DepthMaxMetres("Debug_DepthMaxMetres",Range(0,5)) = 5
 		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	) 
 		CameraToLocalViewportMin("CameraToLocalViewportMin",VECTOR) = (0,0,0)
 		CameraToLocalViewportMax("CameraToLocalViewportMax",VECTOR) = (640,480,1000)
@@ -97,17 +103,28 @@
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
 
 				float Debug_MinorAsValid;
-				#define DEBUG_MINOR_AS_VALID	(Debug_MinorAsValid>0.5f)
+				#define DEBUG_MINOR_AS_VALID	(Debug_MinorAsValid>0.5)
 
 				float Debug_MajorAsValid;
-				#define DEBUG_MAJOR_AS_VALID	(Debug_MajorAsValid>0.5f)
+				#define DEBUG_MAJOR_AS_VALID	(Debug_MajorAsValid>0.5)
+
+				float Debug_DepthAsValid;
+				#define DEBUG_DEPTH_AS_VALID	(Debug_DepthAsValid>0.5)
+
+				float Debug_PlaceInvalidDepth;
+			#define DEBUG_PLACE_INVALID_DEPTH	(Debug_PlaceInvalidDepth>0.5)
+
+				float Debug_DepthMinMetres;
+				float Debug_DepthMaxMetres;
 
 				float ValidMinMetres;
 				float MaxEdgeDepth;
+				float MaxCorrectedEdgeDepth;
 				float MaxChromaDiff;
 				float MaxLumaDiff;
 				float EnableDepthNoiseReduction;
 	#define ENABLE_DEPTH_NOISE_REDUCTION	(EnableDepthNoiseReduction>0.5f)
+				float NeighbourSamplePixelStep;
 
 				float Debug_IgnoreMinor;
 				float Debug_IgnoreMajor;
@@ -186,7 +203,8 @@
 					return uv - Overflow;
 				}
 
-				float GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
+				//	return x=depth y=valid
+				float2 GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
 				{
 					//	remember to sample from middle of texel
 					//	gr: sampleuv will be wrong (not exact to texel) if output resolution doesnt match
@@ -196,7 +214,10 @@
 					float Luma = GetLuma( SampleLumauv );
 					float2 ChromaUV = GetChromaUv( SampleChromauv );
 					float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
-					return Depth;
+
+					//	specifically catch 0 pixels. Need a better system here
+					float Valid = Depth >= ValidMinMetres; 
+					return float2( Depth, Valid );
 				}
 
 				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
@@ -207,46 +228,77 @@
 					DecodeParams.DecodedLumaMin = DecodedLumaMin;
 					DecodeParams.DecodedLumaMax = DecodedLumaMax;
 
-					Depth = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
+					float2 OriginDepthValid = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
+					Depth = OriginDepthValid.x;
 					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
 					{
 						Score = 1;
 						return;
 					}
 
+					if ( DEBUG_PLACE_INVALID_DEPTH && OriginDepthValid.y < 1.0 )
+					{
+						Score = 0.5;
+						Depth = Debug_DepthMinMetres;
+						return;
+					}
+
+					//	gr: our 1280x720 encoding seems to be 2x the size of 640x480
+					//		and as chroma planes are half the size, we're seeing gaps (black pixels) of 4x4.
+					//		maybe our chroma sample shouldn't be pixel left & right inside GetNeighbourDepth
+					//		but we definitely need to sample a bit further than 1 pixel... in this case
+					float SampleStep = NeighbourSamplePixelStep;
+					float2 SampleOffsets[4];
+					SampleOffsets[0] = float2(-1,-1) * SampleStep;
+					SampleOffsets[1] = float2(-1,1) * SampleStep;
+					SampleOffsets[2] = float2(1,-1) * SampleStep;
+					SampleOffsets[3] = float2(1,1) * SampleStep;
+
 					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
 					//	gr: we want to sample left & rught, (and in all directions, but planning for future scanline)
-					float Left1 = GetNeighbourDepth(Sampleuv,float2(-1,0),EncodeParams,DecodeParams);
+					float2 Left1 = GetNeighbourDepth(Sampleuv,SampleOffsets[0],EncodeParams,DecodeParams);
 					//	but also, lets match welding directions
-					float Left2 = GetNeighbourDepth(Sampleuv,float2(0,1),EncodeParams,DecodeParams);
-					float Right1 = GetNeighbourDepth(Sampleuv,float2(1,0),EncodeParams,DecodeParams);
-					float Right2 = GetNeighbourDepth(Sampleuv,float2(1,1),EncodeParams,DecodeParams);
+					float2 Left2 = GetNeighbourDepth(Sampleuv,SampleOffsets[1],EncodeParams,DecodeParams);
+					float2 Right1 = GetNeighbourDepth(Sampleuv,SampleOffsets[2],EncodeParams,DecodeParams);
+					float2 Right2 = GetNeighbourDepth(Sampleuv,SampleOffsets[3],EncodeParams,DecodeParams);
 
 					//	figure out if our value is way off (chroma plane or luma value dont align)
-					float Diff_L1 = abs(Depth-Left1);
-					float Diff_L2 = abs(Depth-Left2);
-					float Diff_R1 = abs(Depth-Right1);
-					float Diff_R2 = abs(Depth-Right2);
+					float Diff_L1 = abs(Depth-Left1.x) * lerp( 999, 1, Left1.y );
+					float Diff_L2 = abs(Depth-Left2.x) * lerp( 999, 1, Left2.y );
+					float Diff_R1 = abs(Depth-Right1.x) * lerp( 999, 1, Right1.y );
+					float Diff_R2 = abs(Depth-Right2.x) * lerp( 999, 1, Right2.y );
 
 
 					float FarDist = max(Diff_L1,max(Diff_L2,max(Diff_R1,Diff_R2)));
 					float NearDist = min(Diff_L1,min(Diff_L2,min(Diff_R1,Diff_R2)));
 
+					
+
 					//	if near enough to a neighbour, just score    
-					if ( NearDist <= MaxEdgeDepth )
+					if ( NearDist <= MaxEdgeDepth && OriginDepthValid.y > 0.0 )
 					{
-						Score = 1.0 - (NearDist / MaxEdgeDepth);
-						//Score = 2;
+						//Score = Range( MaxEdgeDepth, 0.0, NearDist );
+						//Score += 1.001;
+Score = 2;
 					}
 					else // if best score is low, then snap to a neighbours depth
+					if ( NearDist <= MaxCorrectedEdgeDepth || OriginDepthValid.y <= 0.0)
 					{
 						float BestDepth = Left1;
+/*
 						BestDepth = lerp( BestDepth, Left1, abs(Left1-Depth) < abs(BestDepth-Depth) );
 						BestDepth = lerp( BestDepth, Left2, abs(Left2-Depth) < abs(BestDepth-Depth) );
 						BestDepth = lerp( BestDepth, Right1, abs(Right1-Depth) < abs(BestDepth-Depth) );
 						BestDepth = lerp( BestDepth, Right2, abs(Right2-Depth) < abs(BestDepth-Depth) );
+*/
 						Depth = BestDepth;
-						Score = 1.0 - (NearDist / MaxEdgeDepth);
+
+						Score = Range( MaxEdgeDepth, MaxCorrectedEdgeDepth, NearDist );
+Score = 1.0;
+					}
+					else
+					{
+						Score = 0;
 					}
 
 					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
@@ -300,6 +352,11 @@
 					//	in native, we could
 					float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
 
+					if ( DEBUG_DEPTH_AS_VALID )
+					{
+						float DepthNormalised = Range( Debug_DepthMinMetres, Debug_DepthMaxMetres, CameraDepth );
+						return float4(OutputPosition, DepthNormalised );
+					}
 
 					if ( DEBUG_MINOR_AS_VALID )
 					{
