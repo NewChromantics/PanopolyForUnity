@@ -230,16 +230,17 @@
 
 					float2 OriginDepthValid = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
 					Depth = OriginDepthValid.x;
-					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
-					{
-						Score = 1;
-						return;
-					}
-
+					
 					if ( DEBUG_PLACE_INVALID_DEPTH && OriginDepthValid.y < 1.0 )
 					{
 						Score = 0.5;
 						Depth = Debug_DepthMinMetres;
+						return;
+					}
+
+					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
+					{
+						Score = 1;
 						return;
 					}
 
@@ -250,9 +251,9 @@
 					float SampleStep = NeighbourSamplePixelStep;
 					float2 SampleOffsets[4];
 					SampleOffsets[0] = float2(-1,-1) * SampleStep;
-					SampleOffsets[1] = float2(-1,1) * SampleStep;
+					SampleOffsets[1] = float2(-2,1) * SampleStep;
 					SampleOffsets[2] = float2(1,-1) * SampleStep;
-					SampleOffsets[3] = float2(1,1) * SampleStep;
+					SampleOffsets[3] = float2(2,1) * SampleStep;
 
 					//	gr: sample half way (on texel edge) to get binlear gradients, then can sample 2x? (plus up and down?)
 					//	gr: we want to sample left & rught, (and in all directions, but planning for future scanline)
@@ -272,17 +273,27 @@
 					float FarDist = max(Diff_L1,max(Diff_L2,max(Diff_R1,Diff_R2)));
 					float NearDist = min(Diff_L1,min(Diff_L2,min(Diff_R1,Diff_R2)));
 
-					
-
-					//	if near enough to a neighbour, just score    
-					if ( NearDist <= MaxEdgeDepth && OriginDepthValid.y > 0.0 )
+					//	origin sample is invalid, (ie black pixel, not noisy) we need to pick any good sample
+					//	todo: this is where we would find a nearby pixel of the same COLOUR and pick that
+					if ( OriginDepthValid.y < 1.0 )
+					{
+						float2 Result = OriginDepthValid;
+						Result = lerp( Result, Left1, (Left1.y > Result.y) ? 1 : 0 );
+						Result = lerp( Result, Left2, (Left2.y > Result.y) ? 1 : 0 );
+						Result = lerp( Result, Right1, (Right1.y > Result.y) ? 1 : 0 );
+						Result = lerp( Result, Right2, (Right2.y > Result.y) ? 1 : 0 );
+						Depth = Result.x;
+						Score = (Result.y > 0.0) ? 0.5 : -1;
+						return;
+					}
+					else if ( NearDist <= MaxEdgeDepth )
 					{
 						//Score = Range( MaxEdgeDepth, 0.0, NearDist );
 						//Score += 1.001;
 Score = 2;
 					}
 					else // if best score is low, then snap to a neighbours depth
-					if ( NearDist <= MaxCorrectedEdgeDepth || OriginDepthValid.y <= 0.0)
+					if ( NearDist <= MaxCorrectedEdgeDepth )
 					{
 						float BestDepth = Left1;
 /*
