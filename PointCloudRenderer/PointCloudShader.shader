@@ -15,7 +15,7 @@
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
-		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.5))=0.02
+		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.1))=0.02
         
         MaxSdfDistance("MaxSdfDistance",Range(0,0.2))=1
         RenderSdfMinScore("RenderSdfMinScore",Range(0,1))=1
