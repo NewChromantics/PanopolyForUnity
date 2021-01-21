@@ -70,7 +70,7 @@
 
             int WalkToGoodSample(float2 uv,float2 Step,out float4 NewSample)
             {
-#define SampleSteps 5
+#define SampleSteps 6
                 for ( int s=1;  s<=SampleSteps;    s++ )
                 {
                     float4 SampleX = GetSample(uv,s*Step.x,s*Step.y);

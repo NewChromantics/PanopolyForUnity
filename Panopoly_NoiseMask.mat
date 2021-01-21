@@ -26,12 +26,12 @@ Material:
     m_Floats:
     - CompareChannel: 0
     - Debug_Loners: 0
-    - LonerMaxWidth: 3
+    - LonerMaxWidth: 5
     - MaxSampleDiff8: 9
     - MaxSampleDiffB_8: 12
     - MaxSampleDiffG_8: 9
-    - MaxSampleDiffR_8: 12
+    - MaxSampleDiffR_8: 6
     - SampleWalkWeight: 0
     - Steps: 4
-    - WalkStepSize: 3.47
+    - WalkStepSize: 1.26
     m_Colors: []
