@@ -40,9 +40,9 @@ Material:
     - DrawInvalidPositions: 0
     - MaxSdfDistance: 1
     - MaxWeldDistance: 0.038
-    - MaxWeldDistance_Far: 0.075
-    - MaxWeldDistance_Near: 0.073
-    - PointSize: 0.0028
+    - MaxWeldDistance_Far: 0.102
+    - MaxWeldDistance_Near: 0.02
+    - PointSize: 0.0036
     - RenderSdfMinScore: 1
     - WeldToNeighbour: 1
     m_Colors: []

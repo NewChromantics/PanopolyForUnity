@@ -9,7 +9,8 @@
         [IntRange]MaxSampleDiffB_8("MaxSampleDiffB_8",Range(0,50))=10
         [Toggle]Debug_Loners("Debug_Loners",float)=0
         SampleWalkWeight("SampleWalkWeight",Range(0,1)) = 0.5
-        [IntRange]LonerMaxWidth("LonerMaxWidth",Range(0,20))=1
+        [IntRange]LonerMaxWidth("LonerMaxWidth",Range(0,10))=1
+        WalkStepSize("WalkStepSize",Range(0.5,5))=1
     }
     SubShader
     {
@@ -51,6 +52,7 @@
     #define DEBUG_LONERS    (Debug_Loners>0.5)
 
             int LonerMaxWidth;
+            float WalkStepSize;
 
             v2f vert (appdata v)
             {
@@ -81,8 +83,8 @@
             {
                 float4 Sample0 = GetSample(uv,0,0);
                 NewSample = Sample0;
-#define SampleSteps 10
-               // [unroll(20)]
+#define SampleSteps 5
+                [unroll(SampleSteps)]
                 for ( int s=1;  s<=SampleSteps;    s++ )
                 {
                     float4 Sample4 = GetSample(uv,s*Step,0);
@@ -91,7 +93,8 @@
                     //float Diff = max(Diff4.x,max(Diff4.y,Diff4.z));
                     float3 Diff = Diff4;
                     EdgeSample = Sample4;
-                    if ( Diff.x > MaxSampleDiff.x || Diff.y > MaxSampleDiff.y || Diff.z > MaxSampleDiff.z )
+                    //if ( Diff.x > MaxSampleDiff.x || Diff.y > MaxSampleDiff.y || Diff.z > MaxSampleDiff.z )
+                    if ( Diff.x > MaxSampleDiff.x )
                     {
                         NewSample = Sample0;
                         return s-1;
@@ -111,7 +114,7 @@
             {
                 float4 LeftColour,LastLeftColour;
                 float4 RightColour,LastRightColour;
-                float StepSize = 2;
+                float StepSize = WalkStepSize;
                 int Lefts = GetMatchesHorz(uv,-StepSize,LastLeftColour,LeftColour);
                 int Rights = GetMatchesHorz(uv,StepSize,LastRightColour,RightColour);
 

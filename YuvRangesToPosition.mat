@@ -9,8 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: YuvRangesToPosition
   m_Shader: {fileID: 4800000, guid: 25f8313c71d64284d8f339711255eb09, type: 3}
-  m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENABLEDEPTHNOISEREDUCTION_ON ENCODED_LUMAPINGPONG_ON
-    FLIPOUTPUT_ON FLIPSAMPLE_ON
+  m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENCODED_LUMAPINGPONG_ON FLIPOUTPUT_ON FLIPSAMPLE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -44,8 +43,17 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - YuvPlanes:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
     - ApplyLocalToWorld: 1
+    - Debug_Alpha: 0
     - Debug_Depth: 0
     - Debug_DepthAsValid: 0
     - Debug_DepthMaxMetres: 1.52
@@ -55,9 +63,10 @@ Material:
     - Debug_MajorAsValid: 0
     - Debug_MinorAsValid: 0
     - Debug_PlaceInvalidDepth: 0
+    - Debug_Yuv: 0
     - DecodedLumaMax: 217
     - DecodedLumaMin: 2
-    - EnableDepthNoiseReduction: 1
+    - EnableDepthNoiseReduction: 0
     - Encoded_ChromaRangeCount: 10
     - Encoded_DepthMaxMetres: 5
     - Encoded_DepthMinMetres: 0
@@ -68,7 +77,7 @@ Material:
     - FlipSample: 1
     - MaxChromaDiff: 0
     - MaxCorrectedEdgeDepth: 1
-    - MaxEdgeDepth: 0.12
+    - MaxEdgeDepth: 0.0001
     - MaxLumaDiff: 0
     - MinDontMoveScore: 0.899
     - NeighbourSamplePixelStep: 1
