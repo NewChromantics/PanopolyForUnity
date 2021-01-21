@@ -2,10 +2,7 @@
 {
 	Properties
 	{
-		[MainTexture]LumaPlane("LumaPlane", 2D) = "white" {}
-		Plane2("Plane2", 2D) = "white" {}
-		Plane3("Plane3", 2D) = "white" {}
-		[IntRange]PlaneCount("PlaneCount",Range(0,3)) = 3
+		[MainTexture]_MainTex("Texture", 2D) = "white" {}
 
 		DecodedLumaMin("DecodedLumaMin",Range(0,255) ) = 0
 		DecodedLumaMax("DecodedLumaMax",Range(0,255) ) = 255
@@ -20,6 +17,8 @@
 		MaxCorrectedEdgeDepth("MaxCorrectedEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
 		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
+		[Toggle]Debug_Alpha("Debug_Alpha",Range(0,1))=0
+		[Toggle]Debug_Yuv("Debug_Yuv",Range(0,1))=0
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
 		[Toggle]FlipSample("FlipSample",Range(0,1)) = 0
 		[Toggle]FlipOutput("FlipOutput",Range(0,1)) = 0
@@ -68,18 +67,11 @@
 #define FLIP_SAMPLE	(FlipSample>0.5f)
 				float FlipOutput;
 #define FLIP_OUTPUT	(FlipOutput>0.5f)
-				float _Angle;
-				sampler2D LumaPlane;
-				float4 LumaPlane_TexelSize;
-				float4 LumaPlane_ST;
-				sampler2D Plane2;
-				float4 Plane2_TexelSize;
-				sampler2D Plane3;
-				int PlaneCount;
-				#define ChromaUPlane	Plane2
-				#define ChromaVPlane	Plane3
-				#define ChromaUVPlane	Plane2
-				#define ChromaUPlane_TexelSize	Plane2_TexelSize
+
+				sampler2D _MainTex;
+				float4 _MainTex_TexelSize;
+			#define YuvPlanes	_MainTex
+			#define YuvPlanes_TexelSize	_MainTex_TexelSize
 				
 				int Encoded_ChromaRangeCount;
 				float Encoded_DepthMinMetres;
@@ -98,7 +90,13 @@
 				float4x4 LocalToWorldTransform;
 				float ApplyLocalToWorld;
 				#define APPLY_LOCAL_TO_WORLD	(ApplyLocalToWorld>0.5)
-				
+
+				float Debug_Alpha;
+				#define DEBUG_ALPHA	(Debug_Alpha>0.5)
+
+				float Debug_Yuv;
+				#define DEBUG_YUV	(Debug_Yuv>0.5)
+
 				float Debug_Depth;
 				#define DEBUG_DEPTH	(Debug_Depth>0.5)
 
@@ -139,7 +137,6 @@
 					if ( FLIP_SAMPLE )
 						o.uv.y = 1.0 - o.uv.y;
 					
-					//o.uv = TRANSFORM_TEX(v.uv, LumaPlane);
 					return o;
 				}
 
@@ -166,20 +163,22 @@
 	
 				float GetLuma(float2 uv)
 				{
-					return tex2D(LumaPlane, uv).x;
+					return tex2D(YuvPlanes, uv).x;
 				}			
 
-				float2 GetChromaUv(float2 uv)
+				float2 GetChroma(float2 uv)
 				{
-					if ( PlaneCount == 2 )
-					{
-						return tex2D(ChromaUPlane, uv).xy;
-					}
-					
-					float ChromaU = tex2D(ChromaUPlane, uv).x;
-					float ChromaV = tex2D(ChromaVPlane, uv).x;
-					return float2(ChromaU,ChromaV);
+					return tex2D(YuvPlanes, uv).yz;
 				}
+
+				float2 GetAlpha(float2 uv)
+				{
+					return tex2D(YuvPlanes, uv).w;
+				}
+
+#define LumaPlane_TexelSize	(YuvPlanes_TexelSize)
+#define ChromaUPlane_TexelSize	(YuvPlanes_TexelSize * float2(2,2))
+
 
 				float2 GetLumaUvStep(float xMult,float yMult)
 				{
@@ -212,8 +211,8 @@
 					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetLumaUvStep(0.5,0.5);
 					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetChromaUvStep(0.5,0.5);
 					float Luma = GetLuma( SampleLumauv );
-					float2 ChromaUV = GetChromaUv( SampleChromauv );
-					float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
+					float2 Chroma = GetChroma( SampleChromauv );
+					float Depth = GetCameraDepth( Luma, Chroma.x, Chroma.y, EncodeParams, DecodeParams );
 
 					//	specifically catch 0 pixels. Need a better system here
 					float Valid = Depth >= ValidMinMetres; 
@@ -230,14 +229,14 @@
 
 					float2 OriginDepthValid = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
 					Depth = OriginDepthValid.x;
-					
+					/*
 					if ( DEBUG_PLACE_INVALID_DEPTH && OriginDepthValid.y < 1.0 )
 					{
 						Score = 0.5;
 						Depth = Debug_DepthMinMetres;
 						return;
 					}
-
+*/
 					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
 					{
 						Score = 1;
@@ -334,7 +333,21 @@
 
 				
 				fixed4 frag(v2f i) : SV_Target
-				{					
+				{
+					if ( DEBUG_YUV )
+					{
+						float Luma = GetLuma(i.uv);
+						float2 ChromaUv = GetChroma(i.uv);
+						float Alpha = GetAlpha(i.uv);
+						return float4(Luma,ChromaUv,Alpha);
+					}
+
+					if ( DEBUG_ALPHA )
+					{
+						float Alpha = GetAlpha(i.uv);
+						return float4(Alpha,Alpha,Alpha,1);
+					}
+
 					PopYuvEncodingParams EncodeParams;
 					EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
 					EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
@@ -393,7 +406,7 @@
 					if ( DEBUG_MAJOR_AS_VALID )
 					{
 						float2 Sampleuv = i.uv;
-						float2 ChromaUV = GetChromaUv(Sampleuv);
+						float2 Chroma = GetChroma(Sampleuv);
 						EncodeParams_t Params;
 						Params.DepthMin = EncodeParams.DepthMinMetres * 1000;
 						Params.DepthMax = EncodeParams.DepthMaxMetres * 1000;
@@ -403,7 +416,7 @@
 						int Index;
 						float Indexf;
 						float Nextf;
-						GetChromaRangeIndex(Index,Indexf,Nextf,ChromaUV.x*255,ChromaUV.y*255,Params);
+						GetChromaRangeIndex(Index,Indexf,Nextf,Chroma.x*255,Chroma.y*255,Params);
 
 						//	stripe this output
 						if ( Index & 1 )
