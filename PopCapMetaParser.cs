@@ -59,6 +59,13 @@ namespace PopCap
 		public string TrackingStateReason;
 		public bool ARWorldAlignmentGravity { get { return true; } } //	gr: currently always set to ARWorldAlignmentGravity
 
+
+		//	gr: this needs to be smarter, we should be getting orientation from the device somewhere
+		//		default is OFF, as ipad captures dont need flipping
+		public bool FlipSample;
+		public bool FlipOutput;
+		
+
 		public Matrix4x4 ProjectionMatrix4x4
 		{
 			get

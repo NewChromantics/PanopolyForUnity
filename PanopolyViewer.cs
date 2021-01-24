@@ -451,6 +451,7 @@ public class PanopolyViewer : MonoBehaviour
 
 	void UpdateMaterial(BlitChain blitChain,RenderTexture BlitTarget,TFrameMeta Meta, List<Texture2D> Planes, List<string> PlaneUniforms)
 	{
+		//	gr: can we turn this into a material property block and set it up once?
 		System.Action<Material> SetUniforms = (Material material) =>
 		{
 			material.SetFloat("Encoded_DepthMinMetres", Meta.YuvEncodeParams.DepthMinMm / 1000);
@@ -465,6 +466,8 @@ public class PanopolyViewer : MonoBehaviour
 				material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
 				material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
 				material.SetMatrix("LocalToWorldTransform", Meta.Camera.GetLocalToWorld());
+				material.SetFloat("FlipSample", Meta.Camera.FlipSample ? 1 : 0);
+				material.SetFloat("FlipOutput", Meta.Camera.FlipOutput ? 1 : 0 );
 			}
 			else
 			{
