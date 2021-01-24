@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: YuvRangesToPosition
   m_Shader: {fileID: 4800000, guid: 25f8313c71d64284d8f339711255eb09, type: 3}
-  m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENABLEDEPTHNOISEREDUCTION_ON ENCODED_LUMAPINGPONG_ON
+  m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENCODED_LUMAPINGPONG_ON FLIPOUTPUT_ON FLIPSAMPLE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -43,32 +43,48 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - YuvPlanes:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
     - ApplyLocalToWorld: 1
+    - Debug_Alpha: 0
     - Debug_Depth: 0
+    - Debug_DepthAsValid: 0
+    - Debug_DepthMaxMetres: 1.52
+    - Debug_DepthMinMetres: 1.3
     - Debug_IgnoreMajor: 0
     - Debug_IgnoreMinor: 0
     - Debug_MajorAsValid: 0
     - Debug_MinorAsValid: 0
-    - DecodedLumaMax: 247
-    - DecodedLumaMin: 5
-    - EnableDepthNoiseReduction: 1
-    - Encoded_ChromaRangeCount: 36
+    - Debug_PlaceInvalidDepth: 0
+    - Debug_Yuv: 0
+    - DecodedLumaMax: 217
+    - DecodedLumaMin: 2
+    - EnableDepthNoiseReduction: 0
+    - Encoded_ChromaRangeCount: 10
     - Encoded_DepthMaxMetres: 5
     - Encoded_DepthMinMetres: 0
     - Encoded_DepthRanges: 1
     - Encoded_LumaPingPong: 0
     - Flip: 0
-    - FlipOutput: 0
-    - FlipSample: 0
+    - FlipOutput: 1
+    - FlipSample: 1
     - MaxChromaDiff: 0
-    - MaxEdgeDepth: 0.0066
+    - MaxCorrectedEdgeDepth: 1
+    - MaxEdgeDepth: 0.0001
     - MaxLumaDiff: 0
     - MinDontMoveScore: 0.899
+    - NeighbourSamplePixelStep: 1
     - PlaneCount: 3
-    - ScoreEdgeDepth: 0.014
-    - ValidMinMetres: 0
+    - ScoreEdgeDepth: 0.072
+    - ValidMinMetres: 0.37
     - _Angle: 0
     m_Colors:
-    - CameraToLocalViewportMax: {r: 500, g: 500, b: 1000, a: 0}
+    - CameraToLocalViewportMax: {r: 1280, g: 720, b: 1000, a: 0}
     - CameraToLocalViewportMin: {r: 0, g: 0, b: 0, a: 0}

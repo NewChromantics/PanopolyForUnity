@@ -64,8 +64,8 @@ void GetChromaRangeIndex(out int Index,out float IndexNormalised,out float NextI
 	int RangeMax = (Width*Height) - 1;
 
 	//	gr: emulate shader 
-	float ChromaUv_x = ChromaU / 255.f;
-	float ChromaUv_y = ChromaV / 255.f;
+	float ChromaUv_x = ChromaU / 255.0;
+	float ChromaUv_y = ChromaV / 255.0;
 
 	//	in the encoder, u=x%width and /width, so scales back up to -1  
 	float xf = ChromaUv_x * float(Width - 1);

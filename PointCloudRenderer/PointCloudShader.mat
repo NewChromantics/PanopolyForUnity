@@ -32,14 +32,17 @@ Material:
     - ClipQuadSize: 1
     - ClipToQuad: 1
     - CloudPositionsAreSdf: 0
+    - Debug_AlwaysValid: 0
     - Debug_ColoursStriped: 1
     - Debug_EdgeScore: 0
     - Debug_InvalidPositions: 0
     - Debug_PositionScore: 0
     - DrawInvalidPositions: 0
     - MaxSdfDistance: 1
-    - MaxWeldDistance: 0.0106
-    - PointSize: 0.0023
+    - MaxWeldDistance: 0.038
+    - MaxWeldDistance_Far: 0.2
+    - MaxWeldDistance_Near: 0.144
+    - PointSize: 0.0036
     - RenderSdfMinScore: 1
     - WeldToNeighbour: 1
     m_Colors: []

@@ -157,7 +157,6 @@ namespace Panopoly
 					return PrevFrame;
 				}
 				NewFrame.FrameNumber = NewFrameNumberMaybe.Value;
-				Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + "(last sent=" + (FrameCounter - 1) +" )");
 				if ( FrameMetas.ContainsKey(NewFrame.FrameNumber))
 				{
 					NewFrame.Meta = FrameMetas[NewFrame.FrameNumber];
@@ -166,6 +165,7 @@ namespace Panopoly
 				{
 					Debug("Missing meta for new frame " + NewFrame.FrameNumber);
 				}
+				Debug("Stream " + Name + " decoded frame #" + NewFrame.FrameNumber + " time=" + NewFrame.Meta.GetFrameTimeMs() + " (last sent=" + (FrameCounter - 1) + " )");
 
 				//	set this as next frame and loop around
 				NextDecodedFrame = NewFrame;
@@ -210,9 +210,9 @@ public class PanopolyViewer : MonoBehaviour
 
 	[Header("Temporary hardcoded colour & depth outputs")]
 	public RenderTexture ColourBlitTarget;
-	public Material ColourBlitMaterial;
+	public BlitChain ColourBlitMaterial;
 	public RenderTexture DepthBlitTarget;
-	public Material DepthBlitMaterial;
+	public BlitChain DepthBlitMaterial;
 	public UnityEvent_Texture OnColourUpdated;
 	public UnityEvent_RenderTexture OnDepthUpdated;
 	public UnityEvent_PanopolyFrameColourDepth OnFrame;
@@ -335,6 +335,8 @@ public class PanopolyViewer : MonoBehaviour
 	void UpdateDecode()
 	{
 		var DecodeTime = this.TimeMs + DecodeAheadMs;
+		if (VerboseDebug)
+			Debug.Log("Decoding frame to time: " + DecodeTime);
 		foreach (KeyValuePair<string, TStream> NameAndStream in Streams)
 		{
 			var StreamName = NameAndStream.Key;
@@ -368,8 +370,10 @@ public class PanopolyViewer : MonoBehaviour
 		//	get latest frames from each stream
 		//	gr: try and keep these in sync, UpdateClock() should do it, it should figure out the sync'd frame we should be displaying
 		var FrameTime = this.TimeMs;
-		if ( VerboseDebug )
-			Debug.Log("Decoding to time: " + FrameTime);
+		if (VerboseDebug)
+		{
+			//Debug.Log("Reading frame to time: " + FrameTime);
+		}
 		TDecodedFrame? DepthFrame = null;
 		TDecodedFrame? ColourFrame = null;
 
@@ -401,6 +405,8 @@ public class PanopolyViewer : MonoBehaviour
 
 		if (DepthFrame.HasValue && ColourFrame.HasValue)
 		{
+			if ( VerboseDebug )
+				Debug.Log("Blit colour & depth frame time=" + FrameTime + " colour = " + ColourFrame.Value.Meta.GetFrameTimeMs() + " depth=" + DepthFrame.Value.Meta.GetFrameTimeMs() );
 			OnFrame.Invoke(ColourFrame.Value.Meta, ColourBlitTarget, DepthFrame.Value.Meta, DepthBlitTarget);
 		}
 		/*
@@ -422,9 +428,7 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
-
-		Graphics.Blit(null, BlitTarget, BlitMaterial);
+		UpdateMaterial(BlitMaterial, BlitTarget, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
 		if ( OnBlit != null)
 			OnBlit.Invoke(BlitTarget);
 	}
@@ -439,37 +443,39 @@ public class PanopolyViewer : MonoBehaviour
 		if (BlitTarget == null || BlitMaterial == null)
 			return;
 
-		UpdateMaterial(BlitMaterial, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
-
-		Graphics.Blit(null, BlitTarget, BlitMaterial);
+		UpdateMaterial(BlitMaterial, BlitTarget, Frame.Meta, Frame.FramePlaneTextures, TextureUniformNames);
 		if ( OnBlit != null )
 			OnBlit.Invoke(BlitTarget);
 	}
 
 
-	void UpdateMaterial(Material material,TFrameMeta Meta, List<Texture2D> Planes, List<string> PlaneUniforms)
+	void UpdateMaterial(BlitChain blitChain,RenderTexture BlitTarget,TFrameMeta Meta, List<Texture2D> Planes, List<string> PlaneUniforms)
 	{
-		material.SetFloat("Encoded_DepthMinMetres", Meta.YuvEncodeParams.DepthMinMm / 1000);
-		material.SetFloat("Encoded_DepthMaxMetres", Meta.YuvEncodeParams.DepthMaxMm / 1000);
-		material.SetInt("Encoded_ChromaRangeCount", Meta.YuvEncodeParams.ChromaRangeCount);
-		material.SetInt("Encoded_LumaPingPong", Meta.YuvEncodeParams.PingPongLuma ? 1 : 0);
-		material.SetInt("PlaneCount", Planes.Count);
-		
-		if (Meta.Camera != null )
+		System.Action<Material> SetUniforms = (Material material) =>
 		{
-			material.SetMatrix("CameraToLocalTransform", Meta.Camera.GetCameraToLocal());
-			material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
-			material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
-			material.SetMatrix("LocalToWorldTransform", Meta.Camera.GetLocalToWorld());
-		}
-		else
-		{
-			Debug.Log("Warning, popcap meta without camera");
-		}
+			material.SetFloat("Encoded_DepthMinMetres", Meta.YuvEncodeParams.DepthMinMm / 1000);
+			material.SetFloat("Encoded_DepthMaxMetres", Meta.YuvEncodeParams.DepthMaxMm / 1000);
+			material.SetInt("Encoded_ChromaRangeCount", Meta.YuvEncodeParams.ChromaRangeCount);
+			material.SetInt("Encoded_LumaPingPong", Meta.YuvEncodeParams.PingPongLuma ? 1 : 0);
+			material.SetInt("PlaneCount", Planes.Count );
 
-		for ( var i=0;	i<Mathf.Min(Planes.Count,PlaneUniforms.Count);	i++ )
-		{
-			material.SetTexture(PlaneUniforms[i], Planes[i]);
-		}
+			if (Meta.Camera != null)
+			{
+				material.SetMatrix("CameraToLocalTransform", Meta.Camera.GetCameraToLocal());
+				material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
+				material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
+				material.SetMatrix("LocalToWorldTransform", Meta.Camera.GetLocalToWorld());
+			}
+			else
+			{
+				Debug.Log("Warning, popcap meta without camera");
+			}
+
+			for (var i = 0; i < Mathf.Min(Planes.Count, PlaneUniforms.Count); i++)
+			{
+				material.SetTexture(PlaneUniforms[i], Planes[i]);
+			}
+		};
+		blitChain.Blit(null, BlitTarget, SetUniforms);
 	}
 }

@@ -11,10 +11,12 @@
 		[Toggle]Debug_EdgeScore("Debug_EdgeScore",Range(0,1))= 0
 		[Toggle]Debug_PositionScore("Debug_PositionScore",Range(0,1))= 0
 		[Toggle]Debug_InvalidPositions("Debug_InvalidPositions",Range(0,1))= 0
+		[Toggle]Debug_AlwaysValid("Debug_AlwaysValid",Range(0,1))=0
 		[Toggle]ClipToQuad("ClipToQuad", Range(0,1)) = 1
 		ClipQuadSize("ClipQuadSize",Range(0,1)) = 0.5
 		[Toggle]WeldToNeighbour("WeldToNeighbour",Range(0,1))=1
-		MaxWeldDistance("MaxWeldDistance",Range(0.0001,0.1))=0.02
+		MaxWeldDistance_Near("MaxWeldDistance_Near",Range(0.0001,0.2))=0.02
+		MaxWeldDistance_Far("MaxWeldDistance_Far",Range(0.0001,0.2))=0.02
         
         MaxSdfDistance("MaxSdfDistance",Range(0,0.2))=1
         RenderSdfMinScore("RenderSdfMinScore",Range(0,1))=1
@@ -53,8 +55,8 @@
 			SamplerState sampler_CloudPositions;
 
 			sampler2D CloudColours;
-			float4 CloudPositions_texelSize;
-			float4 CloudColours_texelSize;
+			float4 CloudPositions_TexelSize;
+			float4 CloudColours_TexelSize;
 			float Billboard;
 			float PointSize;
 #define ENABLE_BILLBOARD	(Billboard>0.5)
@@ -64,6 +66,8 @@
 			float Debug_EdgeScore;
 			float Debug_PositionScore;
 			float Debug_InvalidPositions;
+			float Debug_AlwaysValid;
+#define DEBUG_ALWAYSVALID	(Debug_AlwaysValid>0.5)
 #define DRAW_INVALIDPOSITIONS	(DrawInvalidPositions>0.5 || DEBUG_INVALIDPOSITIONS)
 #define DEBUG_EDGESCORE	(Debug_EdgeScore>0.5)
 #define DEBUG_POSITIONSCORE	(Debug_PositionScore>0.5)
@@ -76,7 +80,8 @@
 
 			float WeldToNeighbour;
 			#define WELD_TO_NEIGHBOUR	(WeldToNeighbour>0.5f)
-			float MaxWeldDistance;
+			float MaxWeldDistance_Near;
+			float MaxWeldDistance_Far;
             
             
 			float CloudPositionsAreSdf;
@@ -93,16 +98,20 @@
 				float2 VertexUv = v.TriangleUv_PointIndex.xy;
 				float2 PointMapUv = v.PointMapUv_VertexIndex.xy;
 				float4 OverrideColour = float4(0,0,0,IS_SDF?1:0);
+				float2 PositionsTexelSize = CloudPositions_TexelSize;
 
 				if ( IS_SDF )
 					Vertex_uv_TriangleIndex_To_CloudUvs_Sdf(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, CameraPosition, OverrideColour.xyz, PositionScore );
 				else 
-					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, VertexUv, PointMapUv, PointSize, MaxWeldDistance, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
+					Vertex_uv_TriangleIndex_To_CloudUvs(CloudPositions, sampler_CloudPositions, PositionsTexelSize, VertexUv, PointMapUv, PointSize, MaxWeldDistance_Near, MaxWeldDistance_Far, WELD_TO_NEIGHBOUR, CameraPosition, ColourUv, PositionScore, EdgeScore );
 
 				//float3 CameraPosition = GetTrianglePosition(TriangleIndex, ColourUv, Valid);
 				//	gr: if we count position scores, we include corrected ones, so invalid edges jump to 0,0,0
 				//bool Valid = min(EdgeScore,PositionScore) > MIN_VALID_SCORE;  
-				bool Valid = EdgeScore > MIN_VALID_SCORE;
+				bool Valid = EdgeScore > 0.0;//MIN_VALID_SCORE;
+				//bool Valid = PositionScore > 0.0;
+
+				//Valid = Valid || DEBUG_ALWAYSVALID;
 
 				//if ( !DRAW_INVALIDPOSITIONS )
 				//	Valid = EdgeScore > MIN_VALID_SCORE;
@@ -128,7 +137,7 @@
 					}
 				}
 
-				//	degenerate invalid 
+				//	degenerate invalid   
 				if (!Valid && !DRAW_INVALIDPOSITIONS )
 				{
 					o.vertex = float4(0, 0, 0, 0);

@@ -1,12 +1,8 @@
-﻿Shader "Panopoly/YuvRangesToPosition"
+﻿Shader "Panopoly/DepthToPosition"
 {
 	Properties
 	{
 		[MainTexture]_MainTex("Texture", 2D) = "white" {}
-
-		DecodedLumaMin("DecodedLumaMin",Range(0,255) ) = 0
-		DecodedLumaMax("DecodedLumaMax",Range(0,255) ) = 255
-
 		[Header(Encoding Params from PopCap)]Encoded_DepthMinMetres("Encoded_DepthMinMetres",Range(0,30)) = 0
 		Encoded_DepthMaxMetres("Encoded_DepthMaxMetres",Range(0,30)) = 5
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
@@ -18,17 +14,10 @@
 		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Alpha("Debug_Alpha",Range(0,1))=0
-		[Toggle]Debug_Yuv("Debug_Yuv",Range(0,1))=0
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
 		[Toggle]FlipSample("FlipSample",Range(0,1)) = 0
 		[Toggle]FlipOutput("FlipOutput",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
-		[Toggle]Debug_IgnoreMinor("Debug_IgnoreMinor",Range(0,1)) = 0
-		[Toggle]Debug_IgnoreMajor("Debug_IgnoreMajor",Range(0,1)) = 0
-		[Toggle]Debug_MinorAsValid("Debug_MinorAsValid",Range(0,1))=0
-		[Toggle]Debug_MajorAsValid("Debug_MajorAsValid",Range(0,1))=0
-		[Toggle]Debug_DepthAsValid("Debug_DepthAsValid",Range(0,1)) =0
-		[Toggle]Debug_PlaceInvalidDepth("Debug_PlaceInvalidDepth",Range(0,1))=0
 		Debug_DepthMinMetres("Debug_DepthMinMetres",Range(0,5)) = 0
 		Debug_DepthMaxMetres("Debug_DepthMaxMetres",Range(0,5)) = 5
 		//CameraToLocalTransform("CameraToLocalTransform", Matrix) = (1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1	) 
@@ -205,18 +194,10 @@
 				//	return x=depth y=valid
 				float2 GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
 				{
-					//	remember to sample from middle of texel
-					//	gr: sampleuv will be wrong (not exact to texel) if output resolution doesnt match
-					//		may we can fix this in vert shader  
 					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetLumaUvStep(0.5,0.5);
-					float2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetChromaUvStep(0.5,0.5);
-					float Luma = GetLuma( SampleLumauv );
-					float2 Chroma = GetChroma( SampleChromauv );
-					float Depth = GetCameraDepth( Luma, Chroma.x, Chroma.y, EncodeParams, DecodeParams );
-
-					//	specifically catch 0 pixels. Need a better system here
-					float Valid = Depth >= ValidMinMetres; 
-					return float2( Depth, Valid );
+					float2 DepthValid = GetLuma( SampleLumauv );
+					float Depth = lerp( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, DepthValid.x );
+					return float2( Depth, DepthValid.x );
 				}
 
 				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
