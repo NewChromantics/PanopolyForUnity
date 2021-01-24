@@ -8,6 +8,8 @@
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
 		[Toggle]EnableDepthNoiseReduction("EnableDepthNoiseReduction",Range(0,1))=1
+		ClipFarMetres("ClipFarMetres",Range(0,10)) = 10
+		ClipNearMetres("ClipNearMetres",Range(0,5)) = 0
 		[IntRange]NeighbourSamplePixelStep("NeighbourSamplePixelStep",Range(1,10)) = 4
 		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
 		MaxCorrectedEdgeDepth("MaxCorrectedEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
@@ -66,6 +68,10 @@
 				float Encoded_DepthMinMetres;
 				float Encoded_DepthMaxMetres;
 				bool Encoded_LumaPingPong;
+
+				//	any clipping we HAVE to do in this shader as its post-projection scaling 
+				float ClipFarMetres;
+				float ClipNearMetres;
 
 				float DecodedLumaMin;
 				float DecodedLumaMax;
@@ -362,6 +368,10 @@
 					float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 					float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
 
+					if ( LocalPosition.z > ClipFarMetres )
+						DepthScore = 0.0;
+					if ( LocalPosition.z < ClipNearMetres )
+						DepthScore = 0.0;
 
 					float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 					float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
