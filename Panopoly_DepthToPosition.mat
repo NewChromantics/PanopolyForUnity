@@ -9,8 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Panopoly_DepthToPosition
   m_Shader: {fileID: 4800000, guid: a42679ffec1e84be0a534a8022c876d9, type: 3}
-  m_ShaderKeywords: ENABLEDEPTHNOISEREDUCTION_ON ENCODED_LUMAPINGPONG_ON FLIPOUTPUT_ON
-    FLIPSAMPLE_ON
+  m_ShaderKeywords: APPLYLOCALTOWORLD_ON ENABLEDEPTHNOISEREDUCTION_ON ENCODED_LUMAPINGPONG_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -25,7 +24,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - ApplyLocalToWorld: 0
+    - ApplyLocalToWorld: 1
+    - ClipFarMetres: 10
+    - ClipNearMetres: 0
     - Debug_Alpha: 0
     - Debug_Depth: 0
     - Debug_DepthMaxMetres: 5
