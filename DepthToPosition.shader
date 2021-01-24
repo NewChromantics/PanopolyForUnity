@@ -17,8 +17,6 @@
 		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Alpha("Debug_Alpha",Range(0,1))=0
 		[Toggle]Debug_Depth("Debug_Depth",Range(0,1)) = 0
-		[Toggle]FlipSample("FlipSample",Range(0,1)) = 0
-		[Toggle]FlipOutput("FlipOutput",Range(0,1)) = 0
 		[Header(Temporary until invalid depth is standardised)]ValidMinMetres("ValidMinMetres",Range(0,1)) = 0
 		Debug_DepthMinMetres("Debug_DepthMinMetres",Range(0,5)) = 0
 		Debug_DepthMaxMetres("Debug_DepthMaxMetres",Range(0,5)) = 5
@@ -54,10 +52,8 @@
 					float4 vertex : SV_POSITION;
 				};
 
-				float FlipSample;
-#define FLIP_SAMPLE	(FlipSample>0.5f)
-				float FlipOutput;
-#define FLIP_OUTPUT	(FlipOutput>0.5f)
+#define FLIP_SAMPLE	(false)
+#define FLIP_OUTPUT	(false)
 
 				sampler2D _MainTex;
 				float4 _MainTex_TexelSize;
