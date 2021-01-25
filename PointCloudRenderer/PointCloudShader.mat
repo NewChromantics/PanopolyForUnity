@@ -40,8 +40,8 @@ Material:
     - DrawInvalidPositions: 0
     - MaxSdfDistance: 1
     - MaxWeldDistance: 0.038
-    - MaxWeldDistance_Far: 0.2
-    - MaxWeldDistance_Near: 0.144
+    - MaxWeldDistance_Far: 0.12
+    - MaxWeldDistance_Near: 0.069
     - PointSize: 0.0036
     - RenderSdfMinScore: 1
     - WeldToNeighbour: 1
