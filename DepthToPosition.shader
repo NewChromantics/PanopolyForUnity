@@ -157,6 +157,11 @@
 					return tex2D(YuvPlanes, uv).x;
 				}			
 
+				float2 GetDepthValid(float2 uv)
+				{
+					return tex2D(YuvPlanes, uv).xw;
+				}
+
 				float2 GetChroma(float2 uv)
 				{
 					return tex2D(YuvPlanes, uv).yz;
@@ -197,9 +202,9 @@
 				float2 GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
 				{
 					float2 SampleLumauv = GetLumaUvAligned(Sampleuv) + GetLumaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetLumaUvStep(0.5,0.5);
-					float2 DepthValid = GetLuma( SampleLumauv );
+					float2 DepthValid = GetDepthValid( SampleLumauv );
 					float Depth = lerp( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, DepthValid.x );
-					return float2( Depth, DepthValid.x );
+					return float2( Depth, DepthValid.y );
 				}
 
 				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
@@ -222,7 +227,7 @@
 */
 					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
 					{
-						Score = 1;
+						Score = OriginDepthValid.y;
 						return;
 					}
 
