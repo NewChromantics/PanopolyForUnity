@@ -1,4 +1,4 @@
-﻿Shader "Panopoly/DepthToPosition"
+Shader "Panopoly/DepthToPosition"
 {
 	Properties
 	{
@@ -7,14 +7,8 @@
 		Encoded_DepthMaxMetres("Encoded_DepthMaxMetres",Range(0,30)) = 5
 		[IntRange]Encoded_ChromaRangeCount("Encoded_ChromaRangeCount",Range(1,128)) = 1
 		[Toggle]Encoded_LumaPingPong("Encoded_LumaPingPong",Range(0,1)) = 1
-		[Toggle]EnableDepthNoiseReduction("EnableDepthNoiseReduction",Range(0,1))=1
 		ClipFarMetres("ClipFarMetres",Range(0,10)) = 10
 		ClipNearMetres("ClipNearMetres",Range(0,5)) = 0
-		[IntRange]NeighbourSamplePixelStep("NeighbourSamplePixelStep",Range(1,10)) = 4
-		MaxEdgeDepth("MaxEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
-		MaxCorrectedEdgeDepth("MaxCorrectedEdgeDepth",Range(0.0001,1.0))=0.02	//	see MaxWeldDistance
-		MaxChromaDiff("MaxChromaDiff",Range(0,0.3)) = 0.1
-		MaxLumaDiff("MaxLumaDiff",Range(0,0.3)) = 0.1
 		[Toggle]Debug_Valid("Debug_Valid",Range(0,1))=0
 		[Toggle]Debug_InputDepth("Debug_InputDepth",Range(0,1))=0
 		[Toggle]Debug_OutputDepth("Debug_OutputDepth",Range(0,1)) = 0
@@ -103,12 +97,6 @@
 				float Debug_DepthMaxMetres;
 
 				float ValidMinMetres;
-				float MaxEdgeDepth;
-				float MaxCorrectedEdgeDepth;
-				float MaxChromaDiff;
-				float MaxLumaDiff;
-				float EnableDepthNoiseReduction;
-	#define ENABLE_DEPTH_NOISE_REDUCTION	(EnableDepthNoiseReduction>0.5f)
 				float NeighbourSamplePixelStep;
 
 				float Debug_IgnoreMinor;
@@ -119,7 +107,7 @@
 					v2f o;
 					o.vertex = UnityObjectToClipPos(v.vertex);
 
-	                o.uv = v.uv;
+					o.uv = v.uv;
 
 					if ( FLIP_SAMPLE )
 						o.uv.y = 1.0 - o.uv.y;
@@ -169,125 +157,14 @@
 					return uv - Overflow;
 				}
 
-				//	return x=depth y=valid
-				float2 GetNeighbourDepth(float2 Sampleuv,float2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
-				{
-					float2 SampleLumauv = GetDepthUvAligned(Sampleuv) + GetDepthUvStep( OffsetPixels.x, OffsetPixels.y ) + GetDepthUvStep(0.5,0.5);
-					float2 DepthValid = GetDepthAndValid( SampleLumauv );
-					float Depth = lerp( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, DepthValid.x );
-					return float2( Depth, DepthValid.y );
-				}
 
 				void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
 				{
-					PopYuvDecodingParams DecodeParams;
-					DecodeParams.Debug_IgnoreMinor = Debug_IgnoreMinor > 0.5f;
-					DecodeParams.Debug_IgnoreMajor = Debug_IgnoreMajor > 0.5f;
-					DecodeParams.DecodedLumaMin = DecodedLumaMin;
-					DecodeParams.DecodedLumaMax = DecodedLumaMax;
-
-					float2 OriginDepthValid = GetNeighbourDepth(Sampleuv,float2(0,0),EncodeParams,DecodeParams);
-					Depth = OriginDepthValid.x;
-					/*
-					if ( DEBUG_PLACE_INVALID_DEPTH && OriginDepthValid.y < 1.0 )
-					{
-						Score = 0.5;
-						Depth = Debug_DepthMinMetres;
-						return;
-					}
-*/
-					if ( !ENABLE_DEPTH_NOISE_REDUCTION )
-					{
-						Score = OriginDepthValid.y;
-						return;
-					}
-
-					//	gr: our 1280x720 encoding seems to be 2x the size of 640x480
-					//		and as chroma planes are half the size, we're seeing gaps (black pixels) of 4x4.
-					//		maybe our chroma sample shouldn't be pixel left & right inside GetNeighbourDepth
-					//		but we definitely need to sample a bit further than 1 pixel... in this case
-					float SampleStep = NeighbourSamplePixelStep;
-					#define NEIGHBOUR_COUNT	8
-					float2 SampleOffsets[NEIGHBOUR_COUNT];
-					//	gr: we want to sample left & rught, (and in all directions, but planning for future scanline)
-					//	but also, lets match welding directions
-					SampleOffsets[0] = float2(-1,0) * SampleStep;
-					SampleOffsets[1] = float2(-1,-1) * SampleStep;
-					SampleOffsets[2] = float2(0,-1) * SampleStep;
-					SampleOffsets[3] = float2(1,-1) * SampleStep;
-					SampleOffsets[4] = float2(1,0) * SampleStep;
-					SampleOffsets[5] = float2(1,1) * SampleStep;
-					SampleOffsets[6] = float2(0,1) * SampleStep;
-					SampleOffsets[7] = float2(-1,1) * SampleStep;
-#if NEIGHBOUR_COUNT > 8
-					SampleOffsets[8] = float2(-2,0) * SampleStep;
-					SampleOffsets[9] = float2(-2,-2) * SampleStep;
-					SampleOffsets[10] = float2(0,-2) * SampleStep;
-					SampleOffsets[11] = float2(2,-2) * SampleStep;
-					SampleOffsets[12] = float2(2,0) * SampleStep;
-					SampleOffsets[13] = float2(2,2) * SampleStep;
-					SampleOffsets[14] = float2(0,2) * SampleStep;
-					SampleOffsets[15] = float2(-2,2) * SampleStep;
-#endif
-
-					float2 SampleDepths[NEIGHBOUR_COUNT];
-					float SampleDiffs[NEIGHBOUR_COUNT];
-					float FarDist = 0;
-					float NearDist = 9999;
-					for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
-					{
-						float2 SampleDepth = GetNeighbourDepth(Sampleuv,SampleOffsets[s],EncodeParams,DecodeParams);
-						SampleDepths[s] = SampleDepth;
-						//	gr: make the diff massive so it's not used 
-						float SampleDiff = abs(Depth-SampleDepth.x) * lerp( 999, 1, SampleDepth.y );
-						SampleDiffs[s] = SampleDiff;
-						FarDist = max( FarDist, SampleDiff );
-						NearDist = min( NearDist, SampleDiff );
-					}
-
-					//	origin sample is invalid, (ie black pixel, not noisy) we need to pick any good sample
-					//	todo: this is where we would find a nearby pixel of the same COLOUR and pick that
-					if ( OriginDepthValid.y < 1.0 )
-					{
-						float2 Result = OriginDepthValid;
-						for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
-						{
-							float2 SampleDepth = SampleDepths[s];
-							Result = lerp( Result, SampleDepth, (SampleDepth.y > Result.y) ? 1 : 0 );
-						}
-						Depth = Result.x;
-						Score = (Result.y > 0.0) ? 0.5 : -1;
-						return;
-					}
-					else if ( NearDist <= MaxEdgeDepth )
-					{
-						//Score = Range( MaxEdgeDepth, 0.0, NearDist );
-						//Score += 1.001;
-						Score = 2;
-					}
-					else // if best score is low, then snap to a neighbours depth
-					if ( NearDist <= MaxCorrectedEdgeDepth )
-					{
-						float BestDepth = SampleDepths[0].x;
-						for ( int s=0;	s<NEIGHBOUR_COUNT;	s++ )
-						{
-							float2 SampleDepth = SampleDepths[s];
-							BestDepth = lerp( BestDepth, SampleDepth, abs(SampleDepth-Depth) < abs(BestDepth-Depth) );
-						}
-						Depth = BestDepth;
-
-						Score = Range( MaxEdgeDepth, MaxCorrectedEdgeDepth, NearDist );
-						Score = 1.0;
-					}
-					else
-					{
-						Score = 0;
-					}
-
-					//	typically zero (sometimes ~4 post vidoe decoding) means invalid
-					//	Popcap should standardise this to far-away  
-					if ( Depth < ValidMinMetres )
-						Score = -1.0;
+					float2 OffsetPixels = float2(0,0);
+					float2 SampleLumauv = GetDepthUvAligned(Sampleuv) + GetDepthUvStep( OffsetPixels.x, OffsetPixels.y ) + GetDepthUvStep(0.5,0.5);
+					float2 DepthValid = GetDepthAndValid( SampleLumauv );
+					Depth = lerp( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, DepthValid.x );
+					Score = DepthValid.y;
 				}
 
 				
