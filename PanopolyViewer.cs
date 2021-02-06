@@ -351,12 +351,26 @@ public class PanopolyViewer : MonoBehaviour
 		UnityEditor.EditorApplication.update += EditorUpdate;
 	}
 
+	float LastUpdateTime = 0;
+	static float MaxPausedUpdateFrameRate = 10;
+	static float MaxPausedUpdateDelaySecs { get{ return 1/MaxPausedUpdateFrameRate;}}
 	void EditorUpdate()
 	{
 		//	when paused, trigger re-blits
 		if (BlitEveryFrame)
+		{
 			if (UnityEditor.EditorApplication.isPaused)
-				UpdateFrame();
+			{
+				//	throttle update
+				float Now = Time.realtimeSinceStartup;
+				float Elapsed = Now - LastUpdateTime;
+				if ( Elapsed > MaxPausedUpdateDelaySecs )
+				{
+					LastUpdateTime = Now;
+					UpdateFrame();
+				}
+			}
+		}
 	}
 
 	void OnDisable()
