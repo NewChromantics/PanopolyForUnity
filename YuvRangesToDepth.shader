@@ -39,7 +39,7 @@ Shader "Panopoly/YuvRangesToDepth"
 				#pragma vertex vert
 				#pragma fragment frag
 
-				#include "YuvToDepth.cginc"
+				
 				#include "UnityCG.cginc"
 
 				struct appdata
@@ -53,79 +53,14 @@ Shader "Panopoly/YuvRangesToDepth"
 					float2 uv : TEXCOORD0;
 					float4 vertex : SV_POSITION;
 				};
-
-				float FlipSample;
-#define FLIP_SAMPLE	(FlipSample>0.5f)
-				float FlipOutput;
-#define FLIP_OUTPUT	(FlipOutput>0.5f)
-				float _Angle;
-				sampler2D LumaPlane;
-				float4 LumaPlane_TexelSize;
-				float4 LumaPlane_ST;
-				sampler2D Plane2;
-				float4 Plane2_TexelSize;
-				sampler2D Plane3;
-				int PlaneCount;
-				#define ChromaUPlane	Plane2
-				#define ChromaVPlane	Plane3
-				#define ChromaUVPlane	Plane2
-				#define ChromaUPlane_TexelSize	Plane2_TexelSize
-				
-				int Encoded_ChromaRangeCount;
-				float Encoded_DepthMinMetres;
-				float Encoded_DepthMaxMetres;
-				bool Encoded_LumaPingPong;
-
-				float DecodedLumaMin;
-				float DecodedLumaMax;
-
-
-				//	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
-				float3 CameraToLocalViewportMin;
-				float3 CameraToLocalViewportMax;
-				float4x4 CameraToLocalTransform;
-
-				float4x4 LocalToWorldTransform;
-				float ApplyLocalToWorld;
-				#define APPLY_LOCAL_TO_WORLD	(ApplyLocalToWorld>0.5)
-				
-				float Debug_Depth;
-				#define DEBUG_DEPTH	(Debug_Depth>0.5)
-
-				float Debug_MinorAsValid;
-				#define DEBUG_MINOR_AS_VALID	(Debug_MinorAsValid>0.5)
-
-				float Debug_MajorAsValid;
-				#define DEBUG_MAJOR_AS_VALID	(Debug_MajorAsValid>0.5)
-
-				float Debug_DepthAsValid;
-				#define DEBUG_DEPTH_AS_VALID	(Debug_DepthAsValid>0.5)
-
-				float Debug_PlaceInvalidDepth;
-			#define DEBUG_PLACE_INVALID_DEPTH	(Debug_PlaceInvalidDepth>0.5)
-
-				float Debug_DepthMinMetres;
-				float Debug_DepthMaxMetres;
-
-				float ValidMinMetres;
-				float MaxEdgeDepth;
-				float MaxCorrectedEdgeDepth;
-				float MaxChromaDiff;
-				float MaxLumaDiff;
-				float EnableDepthNoiseReduction;
-	#define ENABLE_DEPTH_NOISE_REDUCTION	(EnableDepthNoiseReduction>0.5f)
-				float NeighbourSamplePixelStep;
-
-				float Debug_IgnoreMinor;
-				float Debug_IgnoreMajor;
-
-
 #define vec2 float2
 #define vec3 float3
 #define vec4 float4
 #define NO_MAIN
 				#include "YuvRangesToDepth.frag.glsl"
 
+uniform float FlipSample;
+#define FLIP_SAMPLE	(FlipSample>0.5f)
 
 				v2f vert(appdata v)
 				{
@@ -141,87 +76,10 @@ Shader "Panopoly/YuvRangesToDepth"
 					return o;
 				}
 
-				float3 NormalToRedGreen(float Normal)
-				{
-					if (Normal < 0.0)
-					{
-						return float3(0, 1, 1);
-					}
-					if (Normal < 0.5)
-					{
-						Normal = Normal / 0.5;
-						return float3(1, Normal, 0);
-					}
-					else if (Normal <= 1)
-					{
-						Normal = (Normal - 0.5) / 0.5;
-						return float3(1 - Normal, 1, 0);
-					}
-
-					//	>1
-					return float3(0, 0, 1);
-				}
-
-
 				
 				fixed4 frag(v2f i) : SV_Target
-				{					
-					PopYuvEncodingParams EncodeParams;
-					EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
-					EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
-					EncodeParams.DepthMaxMetres = Encoded_DepthMaxMetres;
-					EncodeParams.PingPongLuma = Encoded_LumaPingPong;
-
-					//	this output should be in camera-local space (normalised)
-					float CameraDepth;
-					float DepthScore;
-					GetDepth(CameraDepth,DepthScore,i.uv,EncodeParams);
-
-					//	return normalised depth
-					CameraDepth = Range( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, CameraDepth );
-					
-
-					if ( DEBUG_DEPTH_AS_VALID )
-					{
-						return float4(CameraDepth,CameraDepth,CameraDepth,CameraDepth);
-					}
-
-					if ( DEBUG_MINOR_AS_VALID )
-					{
-						float2 Sampleuv = i.uv;
-						float Luma = GetLuma(Sampleuv);
-						return float4(CameraDepth,CameraDepth,CameraDepth, Luma);
-					}
-
-					if ( DEBUG_MAJOR_AS_VALID )
-					{
-						float2 Sampleuv = i.uv;
-						float2 ChromaUV = GetChromaUv(Sampleuv);
-						EncodeParams_t Params;
-						Params.DepthMin = EncodeParams.DepthMinMetres * 1000;
-						Params.DepthMax = EncodeParams.DepthMaxMetres * 1000;
-						Params.ChromaRangeCount = EncodeParams.ChromaRangeCount;
-						Params.PingPongLuma = EncodeParams.PingPongLuma;
-	
-						int Index;
-						float Indexf;
-						float Nextf;
-						GetChromaRangeIndex(Index,Indexf,Nextf,ChromaUV.x*255,ChromaUV.y*255,Params);
-
-						//	stripe this output
-						if ( Index & 1 )
-							Indexf += 0.5;
-
-						return float4(CameraDepth,CameraDepth,CameraDepth, Indexf);
-					}
-
-					if ( DEBUG_DEPTH )
-					{
-						float3 Rgb = NormalToRedGreen(CameraDepth);
-						return float4(Rgb, DepthScore);
-					}
-					
-					return float4(CameraDepth,CameraDepth,CameraDepth, DepthScore);
+				{
+					return YuvRangesToDepth(i.uv);
 				}
 				ENDCG
 			}
