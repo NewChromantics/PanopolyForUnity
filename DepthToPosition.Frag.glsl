@@ -1,5 +1,31 @@
-//	now done exclusively in yuv->depth
-#define FLIP_SAMPLE	(false)
+precision highp float;
+
+//	from quad shader (webgl)
+varying vec2 uv;
+
+//	unity->glsl conversion
+#define lerp mix
+#define tex2D texture2D
+#define float2 vec2
+#define float3 vec3
+#define float4 vec4
+#define float4x4 mat4
+#define trunc	floor
+#define fmod(x,y)	(x - y * trunc(x / y))
+#define mul(Matrix,Vector)	(Matrix*Vector)
+
+//#include "YuvToDepth.cginc"
+//	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
+struct PopYuvEncodingParams
+{
+	int ChromaRangeCount;
+	float DepthMinMetres;
+	float DepthMaxMetres;
+	bool PingPongLuma;
+};
+
+
+//	gr: this should really be corrected at the source via viewport min/max
 #define FLIP_OUTPUT	(false)
 
 uniform sampler2D InputTexture;
@@ -40,6 +66,7 @@ uniform float Debug_InputDepth;
 uniform float Debug_OutputDepth;
 #define DEBUG_OUTPUT_DEPTH	(Debug_OutputDepth>0.5)
 
+
 uniform float Debug_DepthAsValid;
 #define DEBUG_DEPTH_AS_VALID	(Debug_DepthAsValid>0.5)
 
@@ -49,15 +76,11 @@ uniform float Debug_PlaceInvalidDepth;
 uniform float Debug_DepthMinMetres;
 uniform float Debug_DepthMaxMetres;
 
-uniform float ValidMinMetres;
-uniform float NeighbourSamplePixelStep;
 
-uniform float Debug_IgnoreMinor;
-uniform float Debug_IgnoreMajor;
-
-
-
-
+float Range(float Min,float Max,float Value)
+{
+	return (Value-Min) / (Max-Min);
+}
 
 
 
@@ -139,8 +162,8 @@ vec4 DepthToPosition(vec2 uv)
 	GetResolvedDepth(CameraDepth,DepthScore,uv,EncodeParams);
 
 	//	gr: projection matrix expects 0..1 
-	float x = lerp(0,1,uv.x); 
-	float y = FLIP_OUTPUT ? lerp(1,0,uv.y) : lerp(0,1,uv.y);
+	float x = lerp(0.0,1.0,uv.x); 
+	float y = FLIP_OUTPUT ? lerp(1.0,0.0,uv.y) : lerp(0.0,1.0,uv.y);
 	float z = CameraDepth;
 					
 	//	now convert camera(image) space depth by the inverse of projection to get local-space
@@ -152,10 +175,10 @@ vec4 DepthToPosition(vec2 uv)
 	float4 CameraPosition4;
 	CameraPosition4.x = CameraPosition.x;
 	CameraPosition4.y = CameraPosition.y;
-	CameraPosition4.z = 1;
+	CameraPosition4.z = 1.0;
 	//	scale all by depth, this is undone by /w hence 1/z
 	//	surely this can go in the matrix....
-	CameraPosition4.w = 1/CameraDepth;
+	CameraPosition4.w = 1.0/CameraDepth;
 
 	float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 	float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
@@ -192,6 +215,7 @@ vec4 DepthToPosition(vec2 uv)
 void main()
 {
 	gl_FragColor = DepthToPosition(uv);
+	gl_FragColor.w = 1.0;
 }
 #endif
 

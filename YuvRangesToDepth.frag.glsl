@@ -9,7 +9,6 @@ varying vec2 uv;
 #define float2 vec2
 #define float3 vec3
 #define float4 vec4
-
 #define trunc	floor
 #define fmod(x,y)	(x - y * trunc(x / y))
 
