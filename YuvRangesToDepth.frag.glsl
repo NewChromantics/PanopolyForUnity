@@ -1,5 +1,8 @@
 precision highp float;
 
+//	from quad shader (webgl)
+varying vec2 uv;
+
 //	unity->glsl conversion
 #define lerp mix
 #define tex2D texture2D
@@ -433,6 +436,6 @@ vec4 YuvRangesToDepth(vec2 uv)
 #if !defined(NO_MAIN)
 void main()
 {
-	gl_FragColor = vec4(1,0,0,1);
+	gl_FragColor = YuvRangesToDepth(uv);
 }
 #endif
