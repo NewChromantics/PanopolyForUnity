@@ -1,99 +1,115 @@
-﻿
-sampler2D _MainTex;
-varying vec4 _MainTex_ST;
-varying vec4 _MainTex_TexelSize;
+precision highp float;
 
-varying float Steps;
-varying float SampleWalkWeight;
-varying float MaxSampleDiffR_8;
-varying float MaxSampleDiffG_8;
-varying float MaxSampleDiffB_8;
-#define MaxSampleDiff   ( float3(MaxSampleDiffR_8,MaxSampleDiffG_8,MaxSampleDiffB_8) / float3(255.0,255.0,255.0) )
+//	from quad shader (webgl)
+varying vec2 uv;
 
-varying float Debug_Loners;
-    #define DEBUG_LONERS    (Debug_Loners>0.5)
+//	unity->glsl conversion
+#define lerp mix
+#define tex2D texture2D
+#define float2 vec2
+#define float3 vec3
+#define float4 vec4
+#define float4x4 mat4
+#define trunc	floor
+#define fmod(x,y)	(x - y * trunc(x / y))
+#define mul(Matrix,Vector)	(Matrix*Vector)
 
-varying int LonerMaxWidth;
-varying float WalkStepSize;
+
+uniform sampler2D InputTexture;
+uniform vec2 InputTextureSize;
+#define InputTexture_TexelSize	vec4(1.0/InputTextureSize.x,1.0/InputTextureSize.y,InputTextureSize.x,InputTextureSize.y)
+
+uniform float Steps;
+uniform float SampleWalkWeight;
+uniform float MaxSampleDiffR_8;
+uniform float MaxSampleDiffG_8;
+uniform float MaxSampleDiffB_8;
+#define MaxSampleDiff	( vec3(MaxSampleDiffR_8,MaxSampleDiffG_8,MaxSampleDiffB_8) / vec3(255.0,255.0,255.0) )
+
+uniform float Debug_Loners;
+#define DEBUG_LONERS	(Debug_Loners>0.5)
+
+uniform float LonerMaxWidth;
+uniform float WalkStepSize;
 
 
 float2 GetSampleUv(float2 uv,float PixelOffsetX,float PixelOffsetY)
 {
-    uv -= fmod( uv, _MainTex_TexelSize );
-    //  sample from center of texel
-    uv += _MainTex_TexelSize.xy / 2;
-    uv += _MainTex_TexelSize.xy * float2(PixelOffsetX,PixelOffsetY);
-    return uv;
+	uv -= fmod( uv, InputTexture_TexelSize.xy );
+	//  sample from center of texel
+	uv += InputTexture_TexelSize.xy / 2.0;
+	uv += InputTexture_TexelSize.xy * vec2(PixelOffsetX,PixelOffsetY);
+	return uv;
 }
 
 float4 GetSample(float2 uv,float PixelOffsetX,float PixelOffsetY)
 {
-    uv = GetSampleUv(uv,PixelOffsetX,PixelOffsetY);
-    float4 Sample = tex2D( _MainTex, uv );
-    return Sample;
+	uv = GetSampleUv(uv,PixelOffsetX,PixelOffsetY);
+	float4 Sample = tex2D( InputTexture, uv );
+	return Sample;
 }
 
 int GetMatchesHorz(vec2 uv,float Step,out vec4 NewSample,out vec4 EdgeSample)
 {
-    vec4 Sample0 = GetSample(uv,0,0);
-    NewSample = Sample0;
-#define SampleSteps 5
-    [unroll(SampleSteps)]
-    for ( int s=1;  s<=SampleSteps;    s++ )
-    {
-        float4 Sample4 = GetSample(uv,s*Step,0);
-        float4 Diff4 = abs(Sample4-Sample0);
-        //float Diff = Diff4[Channel];
-        //float Diff = max(Diff4.x,max(Diff4.y,Diff4.z));
-        float3 Diff = Diff4;
-        EdgeSample = Sample4;
-        //if ( Diff.x > MaxSampleDiff.x || Diff.y > MaxSampleDiff.y || Diff.z > MaxSampleDiff.z )
-        if ( Diff.x > MaxSampleDiff.x )
-        {
-            NewSample = Sample0;
-            return s-1;
-        }
-        //  rewrite sample to let walk continue
-        Sample0 = lerp(Sample0,Sample4,SampleWalkWeight);
-    }
-                
-    NewSample = Sample0;
-    return SampleSteps;
+	vec4 Sample0 = GetSample(uv,0.0,0.0);
+	NewSample = Sample0;
+	#define SampleSteps 5
+	//[unroll(SampleSteps)]
+	for ( int s=1;	s<=SampleSteps;	s++ )
+	{
+		float4 Sample4 = GetSample(uv,float(s)*Step,0.0);
+		float4 Diff4 = abs(Sample4-Sample0);
+		//float Diff = Diff4[Channel];
+		//float Diff = max(Diff4.x,max(Diff4.y,Diff4.z));
+		float3 Diff = Diff4.xyz;
+		EdgeSample = Sample4;
+		//if ( Diff.x > MaxSampleDiff.x || Diff.y > MaxSampleDiff.y || Diff.z > MaxSampleDiff.z )
+		if ( Diff.x > MaxSampleDiff.x )
+		{
+			NewSample = Sample0;
+			return s-1;
+		}
+		//	rewrite sample to let walk continue
+		Sample0 = lerp(Sample0,Sample4,SampleWalkWeight);
+	}
+			
+	NewSample = Sample0;
+	return SampleSteps;
 }
 
-//  gr: possible improvements
-//  - scan other directions
-//  - detect if I'm not a loner, but surrounded by them (maybe not neccessary if reader scans)
+//	gr: possible improvements
+//	- scan other directions
+//	- detect if I'm not a loner, but surrounded by them (maybe not neccessary if reader scans)
 bool IsLoner(vec2 uv)
 {
-    vec4 LeftColour,LastLeftColour;
-    vec4 RightColour,LastRightColour;
-    float StepSize = WalkStepSize;
-    int Lefts = GetMatchesHorz(uv,-StepSize,LastLeftColour,LeftColour);
-    int Rights = GetMatchesHorz(uv,StepSize,LastRightColour,RightColour);
+	vec4 LeftColour,LastLeftColour;
+	vec4 RightColour,LastRightColour;
+	float StepSize = WalkStepSize;
+	int Lefts = GetMatchesHorz(uv,-StepSize,LastLeftColour,LeftColour);
+	int Rights = GetMatchesHorz(uv,StepSize,LastRightColour,RightColour);
 
-    if ( Lefts+Rights <= LonerMaxWidth )
-    {
-        return true;
-    }
-    return false;
+	if ( Lefts+Rights <= int(LonerMaxWidth) )
+	{
+		return true;
+	}
+	return false;
 }
 
 float4 NoiseMask(vec2 uv)
 {
-    vec4 BaseColour = GetSample(uv,0,0);
-    bool Loner = IsLoner(uv);
-    vec4 OutColour = BaseColour;
+	vec4 BaseColour = GetSample(uv,0.0,0.0);
+	bool Loner = IsLoner(uv);
+	vec4 OutColour = BaseColour;
 
-    if ( Loner && DEBUG_LONERS )
-        OutColour = vec4(0,0,1,1);
+	if ( Loner && DEBUG_LONERS )
+		OutColour = vec4(0,0,1,1);
 
-    return vec4(OutColour.xyz, Loner ? 0 : 1 );
+	return vec4(OutColour.xyz, Loner ? 0.0 : 1.0 );
 }
 
 #if !defined(GLSL_NO_MAIN)
 void main()
 {
-    gl_FragColor = NoiseMask(uv);
+	gl_FragColor = NoiseMask(uv);
 }
 #endif
