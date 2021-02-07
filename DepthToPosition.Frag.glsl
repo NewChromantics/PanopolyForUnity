@@ -171,7 +171,7 @@ vec4 DepthToPosition(vec2 uv)
 	float4 CameraPosition = float4(x,y,z,1.0);
 
 	CameraPosition.xyz = lerp( CameraToLocalViewportMin, CameraToLocalViewportMax, CameraPosition.xyz );
-	
+
 	float4 CameraPosition4;
 	CameraPosition4.x = CameraPosition.x;
 	CameraPosition4.y = CameraPosition.y;
@@ -215,7 +215,6 @@ vec4 DepthToPosition(vec2 uv)
 void main()
 {
 	gl_FragColor = DepthToPosition(uv);
-	gl_FragColor.w = 1.0;
 }
 #endif
 
