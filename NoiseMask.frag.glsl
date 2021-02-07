@@ -104,7 +104,7 @@ float4 NoiseMask(vec2 uv)
 	if ( Loner && DEBUG_LONERS )
 		OutColour = vec4(0,0,1,1);
 
-	return vec4(OutColour.xyz, Loner ? 0.0 : 1.0 );
+	return vec4(OutColour.xyz, Loner ? 0.0 : OutColour.w );
 }
 
 #if !defined(GLSL_NO_MAIN)
