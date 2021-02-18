@@ -113,9 +113,57 @@ namespace PopCap
 
 		public static Matrix4x4 ReconstructMatrix(Matrix4x4 RightHandMatrix)
 		{
+			RightHandMatrix = RightHandMatrix.transpose;
+			//	gr: this code deconstructs & reconstructs, but is correct
 			var Translation = __GetPosition(RightHandMatrix);
 			var Rotation = __GetRotation(RightHandMatrix);
-			return Matrix4x4.TRS(Translation, Rotation, Vector3.one);
+			var Left = Matrix4x4.TRS(Translation, Rotation, Vector3.one);
+			return Left;
+		}
+
+		public static Matrix4x4 InvertZMatrix(Matrix4x4 RightHandMatrix)
+		{
+			//	gr: this is my hand-observed changes by the above. Note the original comes in transposed!
+			var Left = new Matrix4x4();
+			
+			if ( true )
+			{
+				var InvertZ = new Matrix4x4();
+				InvertZ.SetRow(0, new Vector4(1, 0, 0, 0));
+				InvertZ.SetRow(1, new Vector4(0, 1, 0, 0));
+				InvertZ.SetRow(2, new Vector4(0, 0, -1, 0));
+				InvertZ.SetRow(3, new Vector4(0, 0, 0, 1));
+				Left = RightHandMatrix * InvertZ;
+
+				//	flip z direction
+				//Left.m32 = -Left.m32;	//	does nothing
+				//Left.m23 = -Left.m23;	//	breaks rotation
+			}
+			else
+			{
+				//	working
+				Left.m00 = RightHandMatrix.m00;
+				Left.m01 = RightHandMatrix.m01;
+				Left.m02 = -RightHandMatrix.m02;
+				Left.m03 = RightHandMatrix.m03;
+
+				Left.m10 = RightHandMatrix.m10;
+				Left.m11 = RightHandMatrix.m11;
+				Left.m12 = -RightHandMatrix.m12;
+				Left.m13 = RightHandMatrix.m13;
+
+				Left.m20 = -RightHandMatrix.m20;
+				Left.m21 = -RightHandMatrix.m21;
+				Left.m22 = RightHandMatrix.m22;
+				Left.m23 = -RightHandMatrix.m23;
+
+				Left.m30 = RightHandMatrix.m30;
+				Left.m31 = RightHandMatrix.m31;
+				Left.m32 = RightHandMatrix.m32;
+				Left.m33 = RightHandMatrix.m33;
+			}			
+
+			return Left;
 		}
 
 		//  https://github.com/sacchy/Unity-Arkit/blob/master/Assets/Plugins/iOS/UnityARKit/Utility/UnityARMatrixOps.cs
@@ -179,15 +227,15 @@ namespace PopCap
 			var Row2 = new Vector4(LocalToWorld[8], LocalToWorld[9], LocalToWorld[10], LocalToWorld[11]);
 			var Row3 = new Vector4(LocalToWorld[12], LocalToWorld[13], LocalToWorld[14], LocalToWorld[15]);
 
-			//	gr: constructor takes COLUMNS, the input data here is column major (from arkit)
 			var Transform = new Matrix4x4();
-			Transform.SetColumn(0, Row0);
-			Transform.SetColumn(1, Row1);
-			Transform.SetColumn(2, Row2);
-			Transform.SetColumn(3, Row3);
+			Transform.SetRow(0, Row0);
+			Transform.SetRow(1, Row1);
+			Transform.SetRow(2, Row2);
+			Transform.SetRow(3, Row3);
 
 			//	convert right hand to left, but can't quite do it in one multiply, so rebuilding matrix (which is stable)
-			Transform = ReconstructMatrix(Transform);
+			//Transform = ReconstructMatrix(Transform);
+			Transform = InvertZMatrix(Transform);
 
 			return Transform;
 		}
