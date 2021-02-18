@@ -27,6 +27,7 @@ struct PopYuvEncodingParams
 
 //	gr: this should really be corrected at the source via viewport min/max
 #define FLIP_OUTPUT	(false)
+uniform bool FlipDepthToPositionSample;
 
 uniform sampler2D InputTexture;
 #if !defined(InputTextureSize)
@@ -56,6 +57,7 @@ uniform float4x4 CameraToLocalTransform;
 uniform float4x4 LocalToWorldTransform;
 uniform float ApplyLocalToWorld;
 #define APPLY_LOCAL_TO_WORLD	(ApplyLocalToWorld>0.5)
+
 
 uniform float Debug_Valid;
 #define DEBUG_VALID	(Debug_Valid>0.5)
@@ -163,9 +165,11 @@ vec4 DepthToPosition(vec2 uv)
 
 	//	gr: projection matrix expects 0..1 
 	float x = lerp(0.0,1.0,uv.x); 
-	float y = FLIP_OUTPUT ? lerp(1.0,0.0,uv.y) : lerp(0.0,1.0,uv.y);
+	float y = FlipDepthToPositionSample ? lerp(1.0,0.0,uv.y) : lerp(0.0,1.0,uv.y);
 	float z = CameraDepth;
-					
+
+
+
 	//	now convert camera(image) space depth by the inverse of projection to get local-space
 
 	float4 CameraPosition = float4(x,y,z,1.0);
@@ -190,7 +194,12 @@ vec4 DepthToPosition(vec2 uv)
 
 	float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 	float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
-				
+	
+	
+	
+	WorldPosition.y += 1.0;
+	WorldPosition.z *= -1.0;
+	
 	//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 	//	because webgl cant always do float textures so is quantized 8bit
 	//	in native, we could
