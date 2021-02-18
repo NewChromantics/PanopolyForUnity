@@ -198,7 +198,6 @@ vec4 DepthToPosition(vec2 uv)
 	
 	
 	WorldPosition.y += 1.0;
-	WorldPosition.z *= -1.0;
 	
 	//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 	//	because webgl cant always do float textures so is quantized 8bit
