@@ -476,10 +476,14 @@ public class PanopolyViewer : MonoBehaviour
 
 			if (Meta.Camera != null)
 			{
-				material.SetMatrix("CameraToLocalTransform", Meta.Camera.GetCameraToLocal());
-				material.SetVector("CameraToLocalViewportMin", Meta.Camera.GetCameraSpaceViewportMin());
-				material.SetVector("CameraToLocalViewportMax", Meta.Camera.GetCameraSpaceViewportMax());
-				material.SetMatrix("LocalToWorldTransform", Meta.Camera.GetLocalToWorld());
+				var CameraToLocal = Meta.Camera.GetCameraToLocal();
+				var CameraViewMin = Meta.Camera.GetCameraSpaceViewportMin();
+				var CameraViewMax = Meta.Camera.GetCameraSpaceViewportMax();
+				var LocalToWorld = Meta.Camera.GetLocalToWorld();
+				material.SetMatrix("CameraToLocalTransform",CameraToLocal);
+				material.SetVector("CameraToLocalViewportMin", CameraViewMin);
+				material.SetVector("CameraToLocalViewportMax", CameraViewMax);
+				material.SetMatrix("LocalToWorldTransform", LocalToWorld);
 				material.SetFloat("FlipSample", Meta.Camera.FlipSample ? 1 : 0);
 				material.SetFloat("FlipOutput", Meta.Camera.FlipOutput ? 1 : 0 );
 			}
