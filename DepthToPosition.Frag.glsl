@@ -24,6 +24,11 @@ struct PopYuvEncodingParams
 	bool PingPongLuma;
 };
 
+uniform float PositionQuantMin;
+uniform float PositionQuantMax;
+//	gr: fornow just quant z
+#define PositionQuantMin3	vec3(-1.0,-1.0,PositionQuantMin)
+#define PositionQuantMax3	vec3(1.0,1.0,PositionQuantMax)
 
 //	gr: this should really be corrected at the source via viewport min/max
 #define FLIP_OUTPUT	(false)
@@ -84,6 +89,13 @@ float Range(float Min,float Max,float Value)
 	return (Value-Min) / (Max-Min);
 }
 
+vec3 Range3(vec3 Min,vec3 Max,vec3 Value)
+{
+	float x = Range(Min.x,Max.x,Value.x);
+	float y = Range(Min.y,Max.y,Value.y);
+	float z = Range(Min.z,Max.z,Value.z);
+	return float3(x,y,z);
+}
 
 
 float3 NormalToRedGreen(float Normal)
@@ -218,7 +230,12 @@ vec4 DepthToPosition(vec2 uv)
 #if !defined(NO_MAIN)
 void main()
 {
-	gl_FragColor = DepthToPosition(uv);
+	float4 Position = DepthToPosition(uv);
+	
+	//	apply webl's quantisation
+	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
+	
+	gl_FragColor = Position;
 }
 #endif
 
