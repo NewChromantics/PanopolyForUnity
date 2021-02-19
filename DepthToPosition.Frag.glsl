@@ -165,7 +165,7 @@ vec4 DepthToPosition(vec2 uv)
 
 	//	gr: projection matrix expects 0..1 
 	float x = lerp(0.0,1.0,uv.x); 
-	float y = FlipDepthToPositionSample ? lerp(1.0,0.0,uv.y) : lerp(0.0,1.0,uv.y);
+	float y = lerp(0.0,1.0,uv.y);	//	assuming top(highest) left of image is 0,0
 	float z = CameraDepth;
 
 
@@ -195,15 +195,11 @@ vec4 DepthToPosition(vec2 uv)
 	float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 	float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
 	
-	
-	
-	WorldPosition.y += 1.0;
-	
 	//	should we convert to world-pos here (with camera localtoworld) web version currently does not
 	//	because webgl cant always do float textures so is quantized 8bit
 	//	in native, we could
 	float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
-
+	
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
 		float DepthNormalised = Range( Debug_DepthMinMetres, Debug_DepthMaxMetres, CameraDepth );

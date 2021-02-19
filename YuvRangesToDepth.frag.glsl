@@ -12,7 +12,8 @@ varying vec2 uv;
 #define trunc	floor
 #define fmod(x,y)	(x - y * trunc(x / y))
 
-
+//	gr: this is now specifically "what is the output from poph264"
+uniform bool VideoYuvIsFlipped;
 
 //#include "YuvToDepth.cginc"
 //	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
@@ -435,6 +436,9 @@ vec4 YuvRangesToDepth(vec2 uv)
 #if !defined(NO_MAIN)
 void main()
 {
-	gl_FragColor = YuvRangesToDepth(uv);
+	vec2 SampleUv = uv;
+	if ( VideoYuvIsFlipped )
+		SampleUv.y = 1.0 - SampleUv.y;
+	gl_FragColor = YuvRangesToDepth(SampleUv);
 }
 #endif
