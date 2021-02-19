@@ -184,6 +184,10 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	Indexf = Lerp(float(Params.DepthMin), float(Params.DepthMax), Indexf);
 	Nextf = Lerp(float(Params.DepthMin), float(Params.DepthMax), Nextf);
 	float Lumaf = float(Luma) / 255.0;
+
+	bool PingPong = BitwiseAndOne(Index) && (Params.PingPongLuma!=0);
+	Lumaf = PingPong ? (1.0-Lumaf) : Lumaf;
+
 	float Depth = Lerp(Indexf, Nextf, Lumaf);
 	uint16_t Depth16 = int(Depth);
 	
