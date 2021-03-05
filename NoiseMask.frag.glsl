@@ -77,10 +77,15 @@ int GetMatchesHorz(vec2 uv,float Step,out vec4 NewSample,out vec4 EdgeSample)
 	return SampleSteps;
 }
 
+#define SAMPLE_TYPE_MIDDLE	1.0
+#define SAMPLE_TYPE_RIGHT	1.9
+#define SAMPLE_TYPE_LEFT	0.6
+#define SAMPLE_TYPE_LONER	0.0
+
 //	gr: possible improvements
 //	- scan other directions
 //	- detect if I'm not a loner, but surrounded by them (maybe not neccessary if reader scans)
-bool IsLoner(vec2 uv)
+float GetSampleType(vec2 uv)
 {
 	vec4 LeftColour,LastLeftColour;
 	vec4 RightColour,LastRightColour;
@@ -89,22 +94,29 @@ bool IsLoner(vec2 uv)
 	int Rights = GetMatchesHorz(uv,StepSize,LastRightColour,RightColour);
 
 	if ( Lefts+Rights <= int(LonerMaxWidth) )
-	{
-		return true;
-	}
-	return false;
+		return SAMPLE_TYPE_LONER;
+
+	if ( Lefts == Rights )
+		return SAMPLE_TYPE_MIDDLE;
+		
+	if ( Lefts < Rights )
+		return SAMPLE_TYPE_LEFT;
+		
+	return SAMPLE_TYPE_RIGHT;
 }
 
 float4 NoiseMask(vec2 uv)
 {
-	vec4 BaseColour = GetSample(uv,0.0,0.0);
-	bool Loner = IsLoner(uv);
-	vec4 OutColour = BaseColour;
+	vec4 Sample = GetSample(uv,0.0,0.0);
+	float SampleType = GetSampleType(uv);
 
-	if ( Loner && DEBUG_LONERS )
-		OutColour = vec4(0,0,1,1);
+	//	if depth has a score or anything other than 0/good, we're losing it here
+	if ( Sample.w == 0.0 )
+		SampleType = SAMPLE_TYPE_LONER;
 
-	return vec4(OutColour.xyz, Loner ? 0.0 : OutColour.w );
+	Sample.w = SampleType;
+
+	return Sample;
 }
 
 #if !defined(GLSL_NO_MAIN)
