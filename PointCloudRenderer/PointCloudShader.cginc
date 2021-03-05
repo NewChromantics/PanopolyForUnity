@@ -1,4 +1,4 @@
-﻿/*
+/*
 float3 GetTrianglePosition(float TriangleIndex, out float2 ColourUv, out bool Valid)
 {
 	float MapWidth = 640;// CloudPositions_TexelSize.z;
@@ -69,10 +69,11 @@ void Vertex_uv_TriangleIndex_To_CloudUvs_float(Texture2D<float4> Positions,Sampl
 	float v = PointMapUv.y;
 	ColourUv = float2(u, 1.0 - v);	
 	
-	//	uv needs to be varying across the point PointSize
-	//	so, PointSize*Texelsize
-	float2 ColourTexelSize = float2(1.0,1.0) / float2(640.0, 480.0);
-	//ColourUv += VertexUv * float2(PointSize, PointSize)*ColourTexelSize;
+	//	uv needs to be varying across the point PointSize so colour stretches across voxel
+	//	this feels wrong that it's not colour texel size, but it's correct (see different 
+	//	res textures!) as we need to know the colour uv for the edge of the next (positioned) 
+	//	voxel, not the next colour sample
+	ColourUv += VertexUv * PositionsTexelSize;
 
 	//	sample from middle of texels to avoid odd samples (or bilinear accidents)
 	//	gr: get proper size! 
