@@ -15,6 +15,13 @@ varying vec2 uv;
 //	gr: this is now specifically "what is the output from poph264"
 uniform bool VideoYuvIsFlipped;
 
+
+//	gr: as minor starts getting so noisy on long-range depth
+//		we start getting noisy data
+//	todo: fix this on encoder side!
+uniform float IgnoreMinorAfterNormalisedRange;
+
+
 //#include "YuvToDepth.cginc"
 //	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
 struct PopYuvEncodingParams
@@ -178,6 +185,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	
 	float Indexf = float(Index) / float(RangeMax);
 	float Nextf = float(Index + 1) / float(RangeMax);
+	float RangeIndexf = Indexf;
 	//return float2(Indexf, Nextf);
 	
 	//	put into depth space
@@ -187,6 +195,9 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 	bool PingPong = BitwiseAndOne(Index) && (Params.PingPongLuma!=0);
 	Lumaf = PingPong ? (1.0-Lumaf) : Lumaf;
+
+	if ( RangeIndexf >= IgnoreMinorAfterNormalisedRange )
+		Lumaf = 0.0;
 
 	float Depth = Lerp(Indexf, Nextf, Lumaf);
 	uint16_t Depth16 = int(Depth);
