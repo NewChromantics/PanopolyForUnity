@@ -79,7 +79,7 @@ int GetMatchesHorz(vec2 uv,float Step,out vec4 NewSample,out vec4 EdgeSample)
 
 #define SAMPLE_TYPE_MIDDLE	1.0
 #define SAMPLE_TYPE_RIGHT	1.9
-#define SAMPLE_TYPE_LEFT	0.6
+#define SAMPLE_TYPE_LEFT	0.7
 #define SAMPLE_TYPE_LONER	0.0
 
 //	gr: possible improvements
@@ -98,7 +98,8 @@ float GetSampleType(vec2 uv)
 
 	if ( Lefts == Rights )
 		return SAMPLE_TYPE_MIDDLE;
-		
+	
+	//	closer to left than right
 	if ( Lefts < Rights )
 		return SAMPLE_TYPE_LEFT;
 		

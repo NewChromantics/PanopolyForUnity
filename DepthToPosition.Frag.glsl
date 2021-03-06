@@ -150,10 +150,12 @@ void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEnco
 	Score = DepthValid.y;
 }
 
+#define CAN_MODIFY_SCORE	true
+
 vec4 DepthToPosition(vec2 uv)
 {
 	if ( DEBUG_INPUT_DEPTH )
-{
+	{
 		float2 DepthValid = GetDepthAndValid(uv);
 		return float4(DepthValid.xxxy);
 	}
@@ -199,11 +201,14 @@ vec4 DepthToPosition(vec2 uv)
 	float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 	float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
 
-	if ( LocalPosition.z > ClipFarMetres )
-		DepthScore = 0.0;
-	if ( LocalPosition.z < ClipNearMetres )
-		DepthScore = 0.0;
-
+	if ( CAN_MODIFY_SCORE )
+	{
+		if ( LocalPosition.z > ClipFarMetres )
+			DepthScore = 0.0;
+		if ( LocalPosition.z < ClipNearMetres )
+			DepthScore = 0.0;
+	}
+	
 	float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 	float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
 	
