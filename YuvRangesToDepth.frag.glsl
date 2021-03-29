@@ -155,8 +155,6 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 
 uint16_t YuvToDepth(float Lumaf, uint8_t ChromaU, uint8_t ChromaV, EncodeParams_t Params)
 {
-	return int( mix( 0.0, 65000.0, Lumaf ) );
-	
 	//	work out from 0 to max this uv points at
 	int Width = GetUvRangeWidthHeight(Params.ChromaRangeCount);
 	int Height = Width;
@@ -177,12 +175,15 @@ uint16_t YuvToDepth(float Lumaf, uint8_t ChromaU, uint8_t ChromaV, EncodeParams_
 	
 	//	gr: this should be nearest, not floor so add half
 	//ChromaUv = floor(ChromaUv + float2(0.5, 0.5) );
-	//int Index = x + (y*Width);
-	int Index = 0;
+	int Index = x + (y*Width);
 	
 	float Indexf = float(Index) / float(RangeMax);
 	float Nextf = float(Index + 1) / float(RangeMax);
 	//return float2(Indexf, Nextf);
+	
+	//	kinect 1-range fix
+	Indexf = 0.0;
+	Nextf = 1.0;
 	
 	//	put into depth space
 	Indexf = Lerp(float(Params.DepthMin), float(Params.DepthMax), Indexf);
