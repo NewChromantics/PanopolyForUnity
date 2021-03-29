@@ -13,8 +13,8 @@ varying vec2 uv;
 #define fmod(x,y)	(x - y * trunc(x / y))
 
 //	gr: this is now specifically "what is the output from poph264"
-//uniform bool VideoYuvIsFlipped;
-const bool VideoYuvIsFlipped = true;
+uniform float VideoYuvIsFlipped;
+#define VIDEOYUV_IS_FLIPPED	(VideoYuvIsFlipped>0.5)
 
 //#include "YuvToDepth.cginc"
 //	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
@@ -453,7 +453,7 @@ vec4 YuvRangesToDepth(vec2 uv)
 void main()
 {
 	vec2 SampleUv = uv;
-	if ( VideoYuvIsFlipped )
+	if ( VIDEOYUV_IS_FLIPPED )
 		SampleUv.y = 1.0 - SampleUv.y;
 	gl_FragColor = YuvRangesToDepth(SampleUv);
 }

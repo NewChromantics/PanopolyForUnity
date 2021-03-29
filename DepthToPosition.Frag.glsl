@@ -32,7 +32,6 @@ uniform float PositionQuantMax;
 
 //	gr: this should really be corrected at the source via viewport min/max
 #define FLIP_OUTPUT	(false)
-uniform bool FlipDepthToPositionSample;
 
 //	gr: when this isn't the first in the blit chain, we use InputTexture
 //		if it IS the first, then InputTexture is null!
@@ -245,7 +244,7 @@ void main()
 	gl_FragColor = Position;
 
 
-	if ( uv.x < 0.2 )
+	if ( uv.x < 0.3 )
 	{
 		float2 DepthValid = GetDepthAndValid(uv);
 		gl_FragColor = vec4( DepthValid, 0, 1 );
