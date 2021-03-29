@@ -240,22 +240,22 @@ vec4 DepthToPosition(vec2 uv)
 #if !defined(NO_MAIN)
 void main()
 {
-/*
 	float4 Position = DepthToPosition(uv);
 	
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
 	
 	gl_FragColor = Position;
-*/	
 
 
-
-	float2 DepthValid = GetDepthAndValid(uv);
-	gl_FragColor = vec4( DepthValid, 0, 1 );
+	if ( uv.x < 0.2 )
+	{
+		float2 DepthValid = GetDepthAndValid(uv);
+		gl_FragColor = vec4( DepthValid, 0, 1 );
 	
-	gl_FragColor = texture( InputTexture, uv );
-	gl_FragColor.x /= 0.2;
+		gl_FragColor = texture( InputTexture, uv );
+		gl_FragColor.x /= 0.2;
+	}
 }
 #endif
 

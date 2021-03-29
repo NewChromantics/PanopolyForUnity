@@ -439,7 +439,7 @@ vec4 YuvRangesToDepth(vec2 uv)
 		return vec4(CameraDepth,CameraDepth,CameraDepth, Indexf);
 	}
 */
-	if ( true || DEBUG_DEPTH )
+	if ( DEBUG_DEPTH )
 	{
 		vec3 Rgb = NormalToRedGreen(CameraDepth);
 		return vec4(Rgb, DepthScore);
