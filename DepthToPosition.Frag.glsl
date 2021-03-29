@@ -60,9 +60,6 @@ uniform bool Encoded_LumaPingPong;
 uniform float ClipFarMetres;
 uniform float ClipNearMetres;
 
-uniform float DecodedLumaMin;
-uniform float DecodedLumaMax;
-
 
 //	this.FrameMeta.CameraToLocalViewportMinMax = [0,0,0,wh[0],wh[1],1000];
 uniform float3 CameraToLocalViewportMin;
