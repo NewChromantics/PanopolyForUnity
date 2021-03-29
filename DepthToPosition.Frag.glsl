@@ -241,9 +241,11 @@ void main()
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
 	
+	//Position.z = 0.5;
+	
 	gl_FragColor = Position;
 
-
+/*
 	if ( uv.x < 0.3 )
 	{
 		float2 DepthValid = GetDepthAndValid(uv);
@@ -252,6 +254,7 @@ void main()
 		gl_FragColor = texture( InputTexture, uv );
 		gl_FragColor.x /= 0.2;
 	}
+	*/
 }
 #endif
 
