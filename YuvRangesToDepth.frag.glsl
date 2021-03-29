@@ -396,24 +396,25 @@ vec4 YuvRangesToDepth(vec2 uv)
 	EncodeParams.PingPongLuma = Encoded_LumaPingPong;
 
 	//	this output should be in camera-local space (normalised)
-	float CameraDepth;
+	float CameraDepthMetres;
 	float DepthScore;
-	GetDepth(CameraDepth,DepthScore,uv,EncodeParams);
+	GetDepth(CameraDepthMetres,DepthScore,uv,EncodeParams);
 
 	//	return normalised depth
-	CameraDepth = Range( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, CameraDepth );
-	//CameraDepth = Range( EncodeParams.DepthMinMetres, 5.0, CameraDepth );
+	float CameraDepthNorm = Range( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, CameraDepthMetres );
+	//	gr: this makes it show up
+	//float CameraDepthNorm = Range( EncodeParams.DepthMinMetres, 5.0, CameraDepth );
 
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
-		return vec4(CameraDepth,CameraDepth,CameraDepth,CameraDepth);
+		return vec4(CameraDepthNorm,CameraDepthNorm,CameraDepthNorm,CameraDepthMetres);
 	}
 
 	if ( DEBUG_MINOR_AS_VALID )
 	{
 		vec2 Sampleuv = uv;
 		float Luma = GetLuma(Sampleuv);
-		return vec4(CameraDepth,CameraDepth,CameraDepth, Luma);
+		return vec4(CameraDepthNorm,CameraDepthNorm,CameraDepthNorm, Luma);
 	}
 /*	gr: GetChromaRangeIndex missing in glsl
 	if ( DEBUG_MAJOR_AS_VALID )
@@ -440,11 +441,12 @@ vec4 YuvRangesToDepth(vec2 uv)
 */
 	if ( DEBUG_DEPTH )
 	{
-		vec3 Rgb = NormalToRedGreen(CameraDepth);
+		float CameraDepthDebugNorm = Range( Debug_DepthMinMetres, Debug_DepthMaxMetres, CameraDepthMetres );
+		vec3 Rgb = NormalToRedGreen(CameraDepthDebugNorm);
 		return vec4(Rgb, DepthScore);
 	}
 					
-	return vec4(CameraDepth,CameraDepth,CameraDepth, DepthScore);
+	return vec4(CameraDepthNorm,CameraDepthNorm,CameraDepthNorm, DepthScore);
 }
 
 #if !defined(NO_MAIN)
