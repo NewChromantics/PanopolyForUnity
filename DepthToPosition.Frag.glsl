@@ -37,11 +37,10 @@ uniform bool FlipDepthToPositionSample;
 //	gr: when this isn't the first in the blit chain, we use InputTexture
 //		if it IS the first, then InputTexture is null!
 //	gr: dont forget this in the declaration!
-uniform sampler2D LumaPlane;
-uniform vec2 LumaPlaneSize;
-
-#define InputTexture LumaPlane
-#define InputTextureSize LumaPlaneSize
+//uniform sampler2D LumaPlane;
+//uniform vec2 LumaPlaneSize;
+//#define InputTexture LumaPlane
+//#define InputTextureSize LumaPlaneSize
 
 #if !defined(InputTexture)
 uniform sampler2D InputTexture;

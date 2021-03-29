@@ -13,7 +13,8 @@ varying vec2 uv;
 #define fmod(x,y)	(x - y * trunc(x / y))
 
 //	gr: this is now specifically "what is the output from poph264"
-uniform bool VideoYuvIsFlipped;
+//uniform bool VideoYuvIsFlipped;
+const bool VideoYuvIsFlipped = true;
 
 //#include "YuvToDepth.cginc"
 //	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
@@ -152,8 +153,10 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 }
 */
 
-uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams_t Params)
+uint16_t YuvToDepth(float Lumaf, uint8_t ChromaU, uint8_t ChromaV, EncodeParams_t Params)
 {
+	return int( mix( 0.0, 65000.0, Lumaf ) );
+	
 	//	work out from 0 to max this uv points at
 	int Width = GetUvRangeWidthHeight(Params.ChromaRangeCount);
 	int Height = Width;
@@ -174,7 +177,8 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	
 	//	gr: this should be nearest, not floor so add half
 	//ChromaUv = floor(ChromaUv + float2(0.5, 0.5) );
-	int Index = x + (y*Width);
+	//int Index = x + (y*Width);
+	int Index = 0;
 	
 	float Indexf = float(Index) / float(RangeMax);
 	float Nextf = float(Index + 1) / float(RangeMax);
@@ -183,7 +187,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	//	put into depth space
 	Indexf = Lerp(float(Params.DepthMin), float(Params.DepthMax), Indexf);
 	Nextf = Lerp(float(Params.DepthMin), float(Params.DepthMax), Nextf);
-	float Lumaf = float(Luma) / 255.0;
+	//float Lumaf = float(Luma) / 255.0;
 
 	bool PingPong = BitwiseAndOne(Index) && (Params.PingPongLuma!=0);
 	Lumaf = PingPong ? (1.0-Lumaf) : Lumaf;
@@ -215,10 +219,11 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 	Params.PingPongLuma = EncodingParams.PingPongLuma?1:0;
 	//	0..1 to 0..255 with adjustments for h264 range
 	//int Luma8 = int( Range( DecodingParams.DecodedLumaMin, DecodingParams.DecodedLumaMax, Luma*255.0 ) * 255.0 );	
-	int Luma8 = int(Luma * 255.0);
+	//int Luma8 = int(Luma * 255.0);
+	float Lumaf = Luma;
 	int ChromaU8 = int(ChromaU * 255.0);
 	int ChromaV8 = int(ChromaV * 255.0);
-	uint16_t DepthMm = YuvToDepth(Luma8, ChromaU8, ChromaV8, Params);
+	uint16_t DepthMm = YuvToDepth(Lumaf, ChromaU8, ChromaV8, Params);
 	return float(DepthMm) / 1000.0;
 }
 
@@ -226,7 +231,8 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 
 
 
-uniform int PlaneCount;
+//uniform int PlaneCount;
+const int PlaneCount = 1;
 uniform sampler2D LumaPlane;
 uniform sampler2D Plane2;
 uniform sampler2D Plane3;
@@ -269,7 +275,8 @@ uniform float Debug_IgnoreMajor;
 //uniform float FlipSample;
 //#define FLIP_SAMPLE	(FlipSample>0.5)
 
-uniform int Encoded_ChromaRangeCount;
+//uniform int Encoded_ChromaRangeCount;
+const int Encoded_ChromaRangeCount = 1;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
 uniform bool Encoded_LumaPingPong;
@@ -286,6 +293,10 @@ float GetLuma(vec2 uv)
 
 vec2 GetChromaUv(vec2 uv)
 {
+	if ( PlaneCount <= 1 )
+	{
+		return vec2(0,0);
+	}
 	if ( PlaneCount == 2 )
 	{
 		return tex2D(ChromaUPlane, uv).xy;
@@ -392,7 +403,7 @@ vec4 YuvRangesToDepth(vec2 uv)
 
 	//	return normalised depth
 	CameraDepth = Range( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, CameraDepth );
-					
+	//CameraDepth = Range( EncodeParams.DepthMinMetres, 5.0, CameraDepth );
 
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
@@ -428,7 +439,7 @@ vec4 YuvRangesToDepth(vec2 uv)
 		return vec4(CameraDepth,CameraDepth,CameraDepth, Indexf);
 	}
 */
-	if ( DEBUG_DEPTH )
+	if ( true || DEBUG_DEPTH )
 	{
 		vec3 Rgb = NormalToRedGreen(CameraDepth);
 		return vec4(Rgb, DepthScore);
