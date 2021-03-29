@@ -336,6 +336,7 @@ vec2 GetNeighbourDepth(vec2 Sampleuv,vec2 OffsetPixels,PopYuvEncodingParams Enco
 	vec2 SampleChromauv = GetChromaUvAligned(Sampleuv) + GetChromaUvStep( OffsetPixels.x, OffsetPixels.y ) + GetChromaUvStep(0.5,0.5);
 	float Luma = GetLuma( SampleLumauv );
 	vec2 ChromaUV = GetChromaUv( SampleChromauv );
+	//	result in metres
 	float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
 
 	//	specifically catch 0 pixels. Need a better system here
@@ -343,6 +344,7 @@ vec2 GetNeighbourDepth(vec2 Sampleuv,vec2 OffsetPixels,PopYuvEncodingParams Enco
 	return vec2( Depth, Valid );
 }
 
+//	returns depth in metres
 void GetDepth(out float Depth,out float Score,vec2 Sampleuv,PopYuvEncodingParams EncodeParams)
 {
 	PopYuvDecodingParams DecodeParams;
