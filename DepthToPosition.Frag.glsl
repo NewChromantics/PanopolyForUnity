@@ -34,7 +34,18 @@ uniform float PositionQuantMax;
 #define FLIP_OUTPUT	(false)
 uniform bool FlipDepthToPositionSample;
 
+//	gr: when this isn't the first in the blit chain, we use InputTexture
+//		if it IS the first, then InputTexture is null!
+//	gr: dont forget this in the declaration!
+uniform sampler2D LumaPlane;
+uniform vec2 LumaPlaneSize;
+
+#define InputTexture LumaPlane
+#define InputTextureSize LumaPlaneSize
+
+#if !defined(InputTexture)
 uniform sampler2D InputTexture;
+#endif
 #if !defined(InputTextureSize)
 uniform vec2 InputTextureSize;
 #endif
@@ -153,7 +164,7 @@ void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEnco
 vec4 DepthToPosition(vec2 uv)
 {
 	if ( DEBUG_INPUT_DEPTH )
-{
+	{
 		float2 DepthValid = GetDepthAndValid(uv);
 		return float4(DepthValid.xxxy);
 	}
@@ -230,12 +241,22 @@ vec4 DepthToPosition(vec2 uv)
 #if !defined(NO_MAIN)
 void main()
 {
+/*
 	float4 Position = DepthToPosition(uv);
 	
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
 	
 	gl_FragColor = Position;
+*/	
+
+
+
+	float2 DepthValid = GetDepthAndValid(uv);
+	gl_FragColor = vec4( DepthValid, 0, 1 );
+	
+	gl_FragColor = texture( InputTexture, uv );
+	gl_FragColor.x /= 0.2;
 }
 #endif
 
