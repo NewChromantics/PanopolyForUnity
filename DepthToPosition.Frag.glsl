@@ -204,12 +204,12 @@ vec4 DepthToPosition(vec2 uv)
 
 	float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 	float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
-
+/*
 	if ( LocalPosition.z > ClipFarMetres )
 		DepthScore = 0.0;
 	if ( LocalPosition.z < ClipNearMetres )
 		DepthScore = 0.0;
-
+*/
 	float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 	float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
 	
@@ -218,6 +218,8 @@ vec4 DepthToPosition(vec2 uv)
 	//	in native, we could
 	float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
 	
+	OutputPosition.z = CameraDepth;
+
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
 		float DepthNormalised = Range( Debug_DepthMinMetres, Debug_DepthMaxMetres, CameraDepth );
@@ -240,8 +242,6 @@ void main()
 	
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
-	
-	//Position.z = 0.5;
 	
 	gl_FragColor = Position;
 
