@@ -218,8 +218,6 @@ vec4 DepthToPosition(vec2 uv)
 	//	in native, we could
 	float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
 	
-	OutputPosition.z = CameraDepth;
-
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
 		float DepthNormalised = Range( Debug_DepthMinMetres, Debug_DepthMaxMetres, CameraDepth );
