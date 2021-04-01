@@ -170,6 +170,7 @@ vec4 DepthToPosition(vec2 uv)
 		return float4(Alpha,Alpha,Alpha,1);
 	}
 
+	//	these min/max should match YUV->Depth output (which is normalised)
 	PopYuvEncodingParams EncodeParams;
 	EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
 	EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
@@ -217,6 +218,9 @@ vec4 DepthToPosition(vec2 uv)
 	//	because webgl cant always do float textures so is quantized 8bit
 	//	in native, we could
 	float3 OutputPosition = APPLY_LOCAL_TO_WORLD ? WorldPosition : LocalPosition;
+	
+	//	confirm output here is not capped to 1.0
+	//OutputPosition.z = 2.0;
 	
 	if ( DEBUG_DEPTH_AS_VALID )
 	{
