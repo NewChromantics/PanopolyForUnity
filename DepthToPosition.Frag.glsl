@@ -205,12 +205,12 @@ vec4 DepthToPosition(vec2 uv)
 
 	float4 LocalPosition4 = mul(CameraToLocalTransform,CameraPosition4);
 	float3 LocalPosition = LocalPosition4.xyz / LocalPosition4.www;
-/*
+
 	if ( LocalPosition.z > ClipFarMetres )
 		DepthScore = 0.0;
 	if ( LocalPosition.z < ClipNearMetres )
 		DepthScore = 0.0;
-*/
+
 	float4 WorldPosition4 = mul(LocalToWorldTransform,float4(LocalPosition,1));
 	float3 WorldPosition = WorldPosition4.xyz / WorldPosition4.www;
 	
