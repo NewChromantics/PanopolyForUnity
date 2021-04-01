@@ -388,7 +388,7 @@ vec3 NormalToRedGreen(float Normal)
 }
 
 vec4 YuvRangesToDepth(vec2 uv)
-{					
+{
 	PopYuvEncodingParams EncodeParams;
 	EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
 	EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
@@ -401,6 +401,8 @@ vec4 YuvRangesToDepth(vec2 uv)
 	GetDepth(CameraDepthMetres,DepthScore,uv,EncodeParams);
 
 	//	return normalised depth
+	//	gr; we maybe should change this, so it's not normalised, but metres and quantisied
+	//		and if we quant, we really should crop here (esp for kinect where the range is 65 metres, but we use 10 at max)
 	float CameraDepthNorm = Range( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, CameraDepthMetres );
 	//	gr: this makes it show up
 	//float CameraDepthNorm = Range( EncodeParams.DepthMinMetres, 5.0, CameraDepth );
