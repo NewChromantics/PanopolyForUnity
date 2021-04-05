@@ -159,7 +159,7 @@ uint16_t YuvToDepth(uint8_t Luma, uint8_t ChromaU, uint8_t ChromaV, EncodeParams
 	int Height = Width;
 	float Widthf = float(Width);
 	float Heightf = float(Height);
-	int RangeMax = (Width*Height) - 1;
+	float RangeMax = max( 1.0, (Widthf*Heightf) - 1.0 );	//	range max ends up being 0 when 1 chroma range, so max()
 	
 	//	gr: emulate shader
 	float ChromaUv_x = float(ChromaU) / 255.0;
