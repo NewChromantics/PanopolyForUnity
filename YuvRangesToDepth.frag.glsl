@@ -261,7 +261,7 @@ uniform float Debug_PlaceInvalidDepth;
 uniform float Debug_DepthMinMetres;
 uniform float Debug_DepthMaxMetres;
 
-uniform float ValidMinMetres;
+uniform float ValidMinLuma;
 uniform float Debug_IgnoreMinor;
 uniform float Debug_IgnoreMajor;
 
@@ -318,7 +318,7 @@ vec2 GetChromaUvAligned(vec2 uv)
 	return uv - Overflow;
 }
 
-//	return x=depth y=valid
+//	return x=depth metres y=valid
 vec2 GetNeighbourDepth(vec2 Sampleuv,vec2 OffsetPixels,PopYuvEncodingParams EncodeParams,PopYuvDecodingParams DecodeParams)
 {
 	//	remember to sample from middle of texel
@@ -331,7 +331,8 @@ vec2 GetNeighbourDepth(vec2 Sampleuv,vec2 OffsetPixels,PopYuvEncodingParams Enco
 	float Depth = GetCameraDepth( Luma, ChromaUV.x, ChromaUV.y, EncodeParams, DecodeParams );
 
 	//	specifically catch 0 pixels. Need a better system here
-	float Valid = (Depth >= ValidMinMetres) ? 1.0 : 0.0; 
+	//	gr: this isn't clipping until EncodeMin... this needs to turn into "luma not zero" it hink
+	float Valid = (Luma >= ValidMinLuma) ? 1.0 : 0.0;
 	return vec2( Depth, Valid );
 }
 

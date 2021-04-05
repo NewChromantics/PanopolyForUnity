@@ -153,7 +153,7 @@ void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEnco
 vec4 DepthToPosition(vec2 uv)
 {
 	if ( DEBUG_INPUT_DEPTH )
-{
+	{
 		float2 DepthValid = GetDepthAndValid(uv);
 		return float4(DepthValid.xxxy);
 	}
