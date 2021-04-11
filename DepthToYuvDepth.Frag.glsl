@@ -3,16 +3,18 @@ precision highp float;
 //	from quad shader (webgl)
 varying vec2 uv;
 
-
+//	output yuv encoding settings
 uniform float Encoded_ChromaRangeCount;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
 uniform float Encoded_LumaPingPong;
-uniform float DepthInput_ToMetres;
 
+//	input
 uniform sampler2D DepthTexture;
 uniform vec2 DepthTextureSize;
 #define DepthTexture_TexelSize	vec2(1.0/DepthTextureSize.x,1.0/DepthTextureSize.y)
+uniform float DepthInput_ToMetres;
+
 uniform float FlipDepthTexture;
 
 uniform vec2 OutputImageSize;
@@ -148,6 +150,7 @@ void main()
 {
 	//	we're expecting planes to go from 0 at the top, so this is to flip the output DATA
 	vec2 OutputUv = vec2(uv.x,1.0-uv.y);
+	//vec2 OutputUv = uv;
 	vec2 DepthSampleUv;
 	int DepthPlaneIndex;
 	GetOutputUv_8_8_8( OutputUv, OutputImageSize, DepthSampleUv, DepthPlaneIndex );
