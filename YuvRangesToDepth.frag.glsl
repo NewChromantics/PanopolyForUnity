@@ -228,8 +228,8 @@ float GetCameraDepth(float Luma, float ChromaU, float ChromaV, PopYuvEncodingPar
 
 
 
-//uniform int PlaneCount;
-const int PlaneCount = 1;
+uniform float PlaneCount;
+#define PLANE_COUNT	(int(PlaneCount))
 uniform sampler2D LumaPlane;
 uniform sampler2D Plane2;
 uniform sampler2D Plane3;
@@ -272,11 +272,10 @@ uniform float Debug_IgnoreMajor;
 //uniform float FlipSample;
 //#define FLIP_SAMPLE	(FlipSample>0.5)
 
-//uniform int Encoded_ChromaRangeCount;
-const int Encoded_ChromaRangeCount = 1;
+uniform float Encoded_ChromaRangeCount;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
-uniform bool Encoded_LumaPingPong;
+uniform float Encoded_LumaPingPong;
 
 uniform float DecodedLumaMin;
 uniform float DecodedLumaMax;
@@ -290,11 +289,11 @@ float GetLuma(vec2 uv)
 
 vec2 GetChromaUv(vec2 uv)
 {
-	if ( PlaneCount <= 1 )
+	if ( PLANE_COUNT <= 1 )
 	{
 		return vec2(0,0);
 	}
-	if ( PlaneCount == 2 )
+	if ( PLANE_COUNT == 2 )
 	{
 		return tex2D(ChromaUPlane, uv).xy;
 	}
@@ -390,10 +389,10 @@ vec3 NormalToRedGreen(float Normal)
 vec4 YuvRangesToDepth(vec2 uv)
 {
 	PopYuvEncodingParams EncodeParams;
-	EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
+	EncodeParams.ChromaRangeCount = int(Encoded_ChromaRangeCount);
 	EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
 	EncodeParams.DepthMaxMetres = Encoded_DepthMaxMetres;
-	EncodeParams.PingPongLuma = Encoded_LumaPingPong;
+	EncodeParams.PingPongLuma = Encoded_LumaPingPong > 0.5;
 
 	//	this output should be in camera-local space (normalised)
 	float CameraDepthMetres;
