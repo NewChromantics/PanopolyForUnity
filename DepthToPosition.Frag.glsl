@@ -36,8 +36,8 @@ uniform float PositionQuantMax;
 //	gr: when this isn't the first in the blit chain, we use InputTexture
 //		if it IS the first, then InputTexture is null!
 //	gr: dont forget this in the declaration!
-//uniform sampler2D LumaPlane;
-//uniform vec2 LumaPlaneSize;
+//xxuxniform sampler2D LumaPlane;
+//xuxniform vec2 LumaPlaneSize;
 //#define InputTexture LumaPlane
 //#define InputTextureSize LumaPlaneSize
 
@@ -50,7 +50,7 @@ uniform vec2 InputTextureSize;
 #define DepthTexture	InputTexture
 #define DepthTexture_TexelSize	vec2(1.0/InputTextureSize.x,1.0/InputTextureSize.y)
 
-uniform int Encoded_ChromaRangeCount;
+uniform float Encoded_ChromaRangeCount;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
 uniform bool Encoded_LumaPingPong;
@@ -172,7 +172,7 @@ vec4 DepthToPosition(vec2 uv)
 
 	//	these min/max should match YUV->Depth output (which is normalised)
 	PopYuvEncodingParams EncodeParams;
-	EncodeParams.ChromaRangeCount = Encoded_ChromaRangeCount;
+	EncodeParams.ChromaRangeCount = int(Encoded_ChromaRangeCount);
 	EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
 	EncodeParams.DepthMaxMetres = Encoded_DepthMaxMetres;
 	EncodeParams.PingPongLuma = Encoded_LumaPingPong;
