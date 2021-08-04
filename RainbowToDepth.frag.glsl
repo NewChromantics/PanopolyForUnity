@@ -50,7 +50,7 @@ void RainbowToNormalAndScore(out float Normal,out float Score,vec3 Rainbow)
 		//	red to green
 		Normal = Range(1.0,0.0,r) + Range(0.0,1.0,g);
 		Normal /= 2.0;
-		Normal = Range( 0.0, 0.5, Normal );
+		Normal = mix( 0.0, 0.333, Normal );
 		Score = 1.0;
 	}
 	else if ( rzero )
@@ -58,7 +58,7 @@ void RainbowToNormalAndScore(out float Normal,out float Score,vec3 Rainbow)
 		//	green to blue
 		Normal = Range(1.0,0.0,g) + Range(0.0,1.0,b);
 		Normal /= 2.0;
-		Normal = Range( 0.0, 0.5, Normal );
+		Normal = mix( 0.333, 0.666, Normal );
 		Score = 1.0;
 	}
 	else if ( gzero )
@@ -66,7 +66,7 @@ void RainbowToNormalAndScore(out float Normal,out float Score,vec3 Rainbow)
 		//	blue to red
 		Normal = Range(1.0,0.0,b) + Range(0.0,1.0,r);
 		Normal /= 2.0;
-		Normal = Range( 0.0, 0.5, Normal );
+		Normal = mix( 0.666, 1.0, Normal );
 		Score = 1.0;
 	}
 	else
