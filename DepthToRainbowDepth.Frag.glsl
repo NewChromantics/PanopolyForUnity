@@ -16,7 +16,7 @@ uniform float DepthInput_ToMetres;
 uniform float FlipDepthTexture;
 
 
-const vec3 InvalidColour = vec3(0,0,0);
+const vec4 InvalidColour = vec4(0,0,0,0);
 
 float Range(float Min,float Max,float Value)
 {
@@ -61,40 +61,42 @@ float GetDepthSample(vec2 uv)
 	return Depth;
 }
 
-float3 NormalToRainbow(float Normal,vec3 OutOfRangeColour)
+float4 NormalToRainbowAndScore(float Normal,vec4 OutOfRangeColour)
 {
 	if ( Normal < 0.0 || Normal > 1.0 )
 		return OutOfRangeColour;
 	
+	float Score = 1.0;
+	
 	if ( Normal < 0.166 )
 	{
 		Normal = Range( 0.0, 0.166, Normal );
-		return vec3( 1.0, Normal, 0.0 );	//	red -> yellow
+		return vec4( 1.0, Normal, 0.0, Score );	//	red -> yellow
 	}
 	else if ( Normal < 0.333 )
 	{
 		Normal = Range( 0.166, 0.333, Normal );
-		return vec3( 1.0-Normal, 1.0, 0.0 );	//	yellow -> green
+		return vec4( 1.0-Normal, 1.0, 0.0, Score );	//	yellow -> green
 	}
 	else if ( Normal < 0.500 )
 	{
 		Normal = Range( 0.333, 0.500, Normal );
-		return vec3( 0.0, 1.0, Normal );	//	green -> cyan
+		return vec4( 0.0, 1.0, Normal, Score );	//	green -> cyan
 	}
 	else if ( Normal < 0.666 )
 	{
 		Normal = Range( 0.500, 0.666, Normal );
-		return vec3( 0.0, 1.0-Normal, 1.0 );	//	cyan -> blue
+		return vec4( 0.0, 1.0-Normal, 1.0, Score );	//	cyan -> blue
 	}
 	else if ( Normal < 0.833 )
 	{
 		Normal = Range( 0.666, 0.833, Normal );
-		return vec3( Normal, 0.0, 1.0 );	//	blue -> purple
+		return vec4( Normal, 0.0, 1.0, Score );	//	blue -> purple
 	}
 	else //if ( Normal < 0.666 )
 	{
 		Normal = Range( 0.833, 1.0, Normal );
-		return vec3( 1.0, 0.0, 1.0-Normal );	//	purple -> red
+		return vec4( 1.0, 0.0, 1.0-Normal, Score );	//	purple -> red
 	}
 	
 }
@@ -118,9 +120,7 @@ void main()
 	float Depth = GetDepthSample(DepthSampleUv);
 	
 	float DepthNorm = Range( Encoded_DepthMinMetres, Encoded_DepthMaxMetres, Depth );
-	gl_FragColor.xyz = NormalToRainbow(DepthNorm, InvalidColour );
-	gl_FragColor.w = 1.0;
-
+	gl_FragColor = NormalToRainbowAndScore(DepthNorm, InvalidColour );
 }
 #endif
 
