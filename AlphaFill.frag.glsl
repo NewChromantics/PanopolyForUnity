@@ -18,8 +18,8 @@ uniform sampler2D InputTexture;
 uniform vec2 InputTextureSize;
 #define InputTexture_TexelSize	vec4(1.0/InputTextureSize.x,1.0/InputTextureSize.y,InputTextureSize.x,InputTextureSize.y)
 
-uniform bool EnableAlphaFill;
-#define APPLY_FILL	EnableAlphaFill
+uniform float EnableAlphaFill;
+#define APPLY_FILL	(EnableAlphaFill>0.5)
 
 uniform float Debug_Filled;
 #define DEBUG_FILLED	(Debug_Filled>0.5)

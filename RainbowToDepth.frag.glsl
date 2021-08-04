@@ -78,10 +78,6 @@ void RainbowToNormalAndScore(out float Normal,out float Score,vec3 Rainbow)
 
 void main()
 {
-	{
-		gl_FragColor = vec4( uv, 0.0, 1.0 );
-		return;
-	}
 	vec2 SampleUv = uv;
 	if ( VIDEOYUV_IS_FLIPPED )
 		SampleUv.y = 1.0 - SampleUv.y;

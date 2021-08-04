@@ -14,15 +14,6 @@ varying vec2 uv;
 #define fmod(x,y)	(x - y * trunc(x / y))
 #define mul(Matrix,Vector)	(Matrix*Vector)
 
-//#include "YuvToDepth.cginc"
-//	shader version of C version https://github.com/SoylentGraham/PopDepthToYuv
-struct PopYuvEncodingParams
-{
-	int ChromaRangeCount;
-	float DepthMinMetres;
-	float DepthMaxMetres;
-	bool PingPongLuma;
-};
 
 uniform float PositionQuantMin;
 uniform float PositionQuantMax;
@@ -50,10 +41,8 @@ uniform vec2 InputTextureSize;
 #define DepthTexture	InputTexture
 #define DepthTexture_TexelSize	vec2(1.0/InputTextureSize.x,1.0/InputTextureSize.y)
 
-uniform float Encoded_ChromaRangeCount;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
-uniform bool Encoded_LumaPingPong;
 
 //	any clipping we HAVE to do in this shader as its post-projection scaling 
 uniform float ClipFarMetres;
@@ -147,12 +136,12 @@ float2 GetDepthUvAligned(float2 uv)
 }
 
 
-void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,PopYuvEncodingParams EncodeParams)
+void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,float EncodedDepthMinMetres,float EncodedDepthMaxMetres)
 {
 	float2 OffsetPixels = float2(0,0);
 	float2 SampleLumauv = GetDepthUvAligned(Sampleuv) + GetDepthUvStep( OffsetPixels.x, OffsetPixels.y ) + GetDepthUvStep(0.5,0.5);
 	float2 DepthValid = GetDepthAndValid( SampleLumauv );
-	Depth = lerp( EncodeParams.DepthMinMetres, EncodeParams.DepthMaxMetres, DepthValid.x );
+	Depth = lerp( EncodedDepthMinMetres, EncodedDepthMaxMetres, DepthValid.x );
 	Score = DepthValid.y;
 }
 
@@ -170,17 +159,10 @@ vec4 DepthToPosition(vec2 uv)
 		return float4(Alpha,Alpha,Alpha,1);
 	}
 
-	//	these min/max should match YUV->Depth output (which is normalised)
-	PopYuvEncodingParams EncodeParams;
-	EncodeParams.ChromaRangeCount = int(Encoded_ChromaRangeCount);
-	EncodeParams.DepthMinMetres = Encoded_DepthMinMetres;
-	EncodeParams.DepthMaxMetres = Encoded_DepthMaxMetres;
-	EncodeParams.PingPongLuma = Encoded_LumaPingPong;
-
 	//	this output should be in camera-local space 
 	float CameraDepth;
 	float DepthScore;
-	GetResolvedDepth(CameraDepth,DepthScore,uv,EncodeParams);
+	GetResolvedDepth(CameraDepth,DepthScore,uv,Encoded_DepthMinMetres,Encoded_DepthMaxMetres);
 
 	//	gr: projection matrix expects 0..1 
 	float x = lerp(0.0,1.0,uv.x); 
