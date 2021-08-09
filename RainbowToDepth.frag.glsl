@@ -22,6 +22,12 @@ uniform vec2 RainbowDepthSize;
 uniform float Encoded_DepthMinMetres;
 uniform float Encoded_DepthMaxMetres;
 
+uniform vec4 DepthRect;
+uniform float InputIsBgr;
+#define INPUT_IS_BGR	(InputIsBgr>0.5)
+
+
+
 float Range(float Min,float Max,float Value)
 {
 	return (Value-Min) / (Max-Min);
@@ -76,13 +82,37 @@ void RainbowToNormalAndScore(out float Normal,out float Score,vec3 Rainbow)
 	}
 }
 
+
+vec3 GetDepthUv(vec2 Uv)
+{
+	float Depthu = Range( DepthRect.x, DepthRect.x+DepthRect.z, Uv.x );
+	float Depthv = Range( DepthRect.y, DepthRect.y+DepthRect.w, Uv.y );
+	
+	bool Inside = ( Depthu >= 0.0 && Depthu <= 1.0 && Depthv >= 0.0 && Depthv <= 1.0 );
+	return vec3( Depthu, Depthv, Inside?1.0:0.0 );
+}
+
+
 void main()
 {
 	vec2 SampleUv = uv;
 	if ( VIDEOYUV_IS_FLIPPED )
 		SampleUv.y = 1.0 - SampleUv.y;
-		
+	
+	vec3 DepthUv = GetDepthUv( SampleUv );
+	
+	if ( DepthUv.z == 0.0 )
+	{
+		gl_FragColor = tex2D( RainbowDepth, SampleUv );
+		if ( INPUT_IS_BGR )
+			gl_FragColor.xyz = gl_FragColor.zyx;
+		return;
+	}
+	
 	vec3 Rgb = tex2D( RainbowDepth, SampleUv ).xyz;
+	if ( INPUT_IS_BGR )
+		Rgb.xyz = Rgb.zyx;
+			
 	float Depth;
 	float Score;
 	RainbowToNormalAndScore( Depth, Score, Rgb );

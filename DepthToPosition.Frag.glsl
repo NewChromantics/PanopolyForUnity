@@ -145,28 +145,28 @@ void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,float Enco
 	Score = DepthValid.y;
 }
 
-vec4 DepthToPosition(vec2 uv)
+vec4 DepthToPosition(vec2 SampleUv,vec2 DepthUv)
 {
 	if ( DEBUG_INPUT_DEPTH )
 	{
-		float2 DepthValid = GetDepthAndValid(uv);
+		float2 DepthValid = GetDepthAndValid(SampleUv);
 		return float4(DepthValid.xxxy);
 	}
 
 	if ( DEBUG_VALID )
 	{
-		float Alpha = GetDepthAndValid(uv).y;
+		float Alpha = GetDepthAndValid(SampleUv).y;
 		return float4(Alpha,Alpha,Alpha,1);
 	}
 
 	//	this output should be in camera-local space 
 	float CameraDepth;
 	float DepthScore;
-	GetResolvedDepth(CameraDepth,DepthScore,uv,Encoded_DepthMinMetres,Encoded_DepthMaxMetres);
+	GetResolvedDepth(CameraDepth,DepthScore,SampleUv,Encoded_DepthMinMetres,Encoded_DepthMaxMetres);
 
 	//	gr: projection matrix expects 0..1 
-	float x = lerp(0.0,1.0,uv.x); 
-	float y = lerp(0.0,1.0,uv.y);	//	assuming top(highest) left of image is 0,0
+	float x = lerp(0.0,1.0,DepthUv.x); 
+	float y = lerp(0.0,1.0,DepthUv.y);	//	assuming top(highest) left of image is 0,0
 	float z = CameraDepth;
 
 
@@ -219,10 +219,30 @@ vec4 DepthToPosition(vec2 uv)
 	return float4(OutputPosition, DepthScore);
 }
 
+uniform vec4 DepthRect;
+
+vec3 GetDepthUv(vec2 Uv)
+{
+	float Depthu = Range( DepthRect.x, DepthRect.x+DepthRect.z, Uv.x );
+	float Depthv = Range( DepthRect.y, DepthRect.y+DepthRect.w, Uv.y );
+	
+	bool Inside = ( Depthu >= 0.0 && Depthu <= 1.0 && Depthv >= 0.0 && Depthv <= 1.0 );
+	return vec3( Depthu, Depthv, Inside?1.0:0.0 );
+}
+
 #if !defined(NO_MAIN)
 void main()
 {
-	float4 Position = DepthToPosition(uv);
+	vec3 DepthUv = GetDepthUv(uv);
+
+	if ( DepthUv.z == 0.0 )
+	{
+		gl_FragColor = texture( InputTexture, uv.xy );
+		//gl_FragColor = vec4(0,0,1,1);
+		return;
+	}
+	
+	float4 Position = DepthToPosition(uv.xy,DepthUv.xy);
 	
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
