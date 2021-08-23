@@ -16,7 +16,8 @@ uniform float DepthInput_ToMetres;
 uniform float FlipDepthTexture;
 
 
-const vec4 InvalidColour = vec4(0,0,0,0);
+const vec4 InvalidNearColour = vec4(0,0,0,0);
+const vec4 InvalidFarColour = vec4(0,0,1,1);
 
 float Range(float Min,float Max,float Value)
 {
@@ -55,16 +56,28 @@ bool BitwiseAndOne(int Value)
 
 float GetDepthSample(vec2 uv)
 {
-	//	convert input to depth
+	#define GLES2
+
+	#if defined(GLES2)
+	//	dont seem to be getting any W value... test this more. also, the DepthInput_ToMetres might not match up
+	vec2 Depth2 = texture2D( DepthTexture, uv ).xw;
+	//float Depth = (Depth2.x * 255.0) + (Depth2.y * 65280.0);
+	//Depth /= 65535.0;
+	float Depth = Depth2.x;
+	#else
+	//	1 16bit/float channel
 	float Depth = texture2D( DepthTexture, uv ).x;
+	#endif
 	Depth *= DepthInput_ToMetres;
 	return Depth;
 }
 
-float4 NormalToRainbowAndScore(float Normal,vec4 OutOfRangeColour)
+float4 NormalToRainbowAndScore(float Normal,vec4 OutOfRangeNearColour,vec4 OutOfRangeFarColour)
 {
-	if ( Normal < 0.0 || Normal > 1.0 )
-		return OutOfRangeColour;
+	if ( Normal < 0.0 )
+		return OutOfRangeNearColour;
+	if ( Normal > 1.0 )
+		return OutOfRangeFarColour;
 	
 	float Score = 1.0;
 	
@@ -120,7 +133,7 @@ void main()
 	float Depth = GetDepthSample(DepthSampleUv);
 	
 	float DepthNorm = Range( Encoded_DepthMinMetres, Encoded_DepthMaxMetres, Depth );
-	gl_FragColor = NormalToRainbowAndScore(DepthNorm, InvalidColour );
+	gl_FragColor = NormalToRainbowAndScore(DepthNorm, InvalidNearColour, InvalidFarColour );
 }
 #endif
 
