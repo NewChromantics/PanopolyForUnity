@@ -56,7 +56,7 @@ bool BitwiseAndOne(int Value)
 
 float GetDepthSample(vec2 uv)
 {
-	#define GLES2
+	//#define GLES2
 
 	#if defined(GLES2)
 	//	dont seem to be getting any W value... test this more. also, the DepthInput_ToMetres might not match up
