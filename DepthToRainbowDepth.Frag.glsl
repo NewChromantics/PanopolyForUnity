@@ -16,8 +16,15 @@ uniform float DepthInput_ToMetres;
 uniform float FlipDepthTexture;
 
 
+uniform float OutputYuvPlaneIndex;	//	-1 rgb, 0=luma 1=chromau 2=chromav
+#define OUTPUT_RGBA		(OutputYuvPlaneIndex < 0.0)
+#define OUTPUT_LUMA		(int(OutputYuvPlaneIndex) == 0)
+#define OUTPUT_CHROMAU	(int(OutputYuvPlaneIndex) == 1)
+#define OUTPUT_CHROMAV	(int(OutputYuvPlaneIndex) == 2)
+
+
 const vec4 InvalidNearColour = vec4(0,0,0,0);
-const vec4 InvalidFarColour = vec4(0,0,1,1);
+const vec4 InvalidFarColour = vec4(0,1,0,0);
 
 float Range(float Min,float Max,float Value)
 {
@@ -56,16 +63,18 @@ bool BitwiseAndOne(int Value)
 
 float GetDepthSample(vec2 uv)
 {
-	//#define GLES2
+	#define TWO_CHANNEL_16BIT_RG
+	#define TWO_CHANNEL_16BIT_RA
 
-	#if defined(GLES2)
+	#if defined(TWO_CHANNEL_16BIT_RG)
 	//	dont seem to be getting any W value... test this more. also, the DepthInput_ToMetres might not match up
-	vec2 Depth2 = texture2D( DepthTexture, uv ).xw;
-	//float Depth = (Depth2.x * 255.0) + (Depth2.y * 65280.0);
-	//Depth /= 65535.0;
-	float Depth = Depth2.x;
+	//	gr: this just doesnt seem to be right, even on desktop. Do more r16 vs rg testing
+	vec2 Depth2 = texture2D( DepthTexture, uv ).xy;
+	float Depth = (Depth2.x * 255.0) + (Depth2.y * 65280.0);
+	Depth /= 65535.0;
+	//float Depth = Depth2.x;
 	#else
-	//	1 16bit/float channel
+	//	1 16bit/float channel (assume normalised and DepthInput_ToMetres compensates)
 	float Depth = texture2D( DepthTexture, uv ).x;
 	#endif
 	Depth *= DepthInput_ToMetres;
@@ -114,6 +123,22 @@ float4 NormalToRainbowAndScore(float Normal,vec4 OutOfRangeNearColour,vec4 OutOf
 	
 }
 
+
+vec3 RgbToYuv(vec3 Rgb)
+{
+	//	calc YUV version
+	//	https://github.com/libretro/glsl-shaders/blob/master/nnedi3/shaders/rgb-to-yuv.glsl
+	//	todo: use proper input YUV params, and check theyre right!
+	float r = Rgb.x;
+	float g = Rgb.y;
+	float b = Rgb.z;
+	float y = r * 0.299 + g * 0.587 + b * 0.114;
+	float u = r * -0.169 + g * -0.331 + b * 0.5 + 0.5;
+	float v = r * 0.5 + g * -0.419 + b * -0.081 + 0.5;
+
+	return vec3(y,u,v);
+}
+
 #if !defined(NO_MAIN)
 void main()
 {
@@ -133,7 +158,27 @@ void main()
 	float Depth = GetDepthSample(DepthSampleUv);
 	
 	float DepthNorm = Range( Encoded_DepthMinMetres, Encoded_DepthMaxMetres, Depth );
+
+	//	rgba
 	gl_FragColor = NormalToRainbowAndScore(DepthNorm, InvalidNearColour, InvalidFarColour );
+
+	//	yuv output
+	vec3 Yuv = RgbToYuv(gl_FragColor.xyz);
+	
+	if ( OUTPUT_LUMA )
+	{
+		gl_FragColor.xyz = Yuv.xxx;
+	}
+	else if ( OUTPUT_CHROMAU )
+	{
+		gl_FragColor.xyz = Yuv.yyy;
+	}
+	else if ( OUTPUT_CHROMAV )
+	{
+		gl_FragColor.xyz = Yuv.zzz;
+	}
+
+	//gl_FragColor = vec4( DepthNorm, DepthNorm, DepthNorm, 1.0 );
 }
 #endif
 
