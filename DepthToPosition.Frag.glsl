@@ -145,34 +145,16 @@ void GetResolvedDepth(out float Depth,out float Score,float2 Sampleuv,float Enco
 	Score = DepthValid.y;
 }
 
-vec4 DepthToPosition(vec2 SampleUv,vec2 DepthUv)
+
+//	this CameraDepth should be in camera-local space 
+vec4 DepthToPosition(vec2 DepthUv,float CameraDepth,float DepthScore)
 {
-	if ( DEBUG_INPUT_DEPTH )
-	{
-		float2 DepthValid = GetDepthAndValid(SampleUv);
-		return float4(DepthValid.xxxy);
-	}
-
-	if ( DEBUG_VALID )
-	{
-		float Alpha = GetDepthAndValid(SampleUv).y;
-		return float4(Alpha,Alpha,Alpha,1);
-	}
-
-	//	this output should be in camera-local space 
-	float CameraDepth;
-	float DepthScore;
-	GetResolvedDepth(CameraDepth,DepthScore,SampleUv,Encoded_DepthMinMetres,Encoded_DepthMaxMetres);
-
 	//	gr: projection matrix expects 0..1 
 	float x = lerp(0.0,1.0,DepthUv.x); 
 	float y = lerp(0.0,1.0,DepthUv.y);	//	assuming top(highest) left of image is 0,0
 	float z = CameraDepth;
 
-
-
 	//	now convert camera(image) space depth by the inverse of projection to get local-space
-
 	float4 CameraPosition = float4(x,y,z,1.0);
 
 	CameraPosition.xyz = lerp( CameraToLocalViewportMin, CameraToLocalViewportMax, CameraPosition.xyz );
@@ -219,6 +201,28 @@ vec4 DepthToPosition(vec2 SampleUv,vec2 DepthUv)
 	return float4(OutputPosition, DepthScore);
 }
 
+vec4 GetSampleDepthToPosition(vec2 SampleUv,vec2 DepthUv)
+{
+	if ( DEBUG_INPUT_DEPTH )
+	{
+		float2 DepthValid = GetDepthAndValid(SampleUv);
+		return float4(DepthValid.xxxy);
+	}
+
+	if ( DEBUG_VALID )
+	{
+		float Alpha = GetDepthAndValid(SampleUv).y;
+		return float4(Alpha,Alpha,Alpha,1);
+	}
+
+	//	this output should be in camera-local space 
+	float CameraDepth;
+	float DepthScore;
+	GetResolvedDepth(DepthUv,CameraDepth,DepthScore,SampleUv,Encoded_DepthMinMetres,Encoded_DepthMaxMetres);
+
+	return DepthToPosition( CameraDepth, DepthScore );
+}
+
 uniform vec4 DepthRect;
 
 vec3 GetDepthUv(vec2 Uv)
@@ -242,7 +246,7 @@ void main()
 		return;
 	}
 	
-	float4 Position = DepthToPosition(uv.xy,DepthUv.xy);
+	float4 Position = GetSampleDepthToPosition(uv.xy,DepthUv.xy);
 	
 	//	apply webl's quantisation
 	Position.xyz = Range3( PositionQuantMin3, PositionQuantMax3, Position.xyz );
